@@ -5,15 +5,16 @@ const MODES={legacy:"Contrato anterior (sem consumo)",credits:"Créditos por ati
 export const fmt=(n)=>new Intl.NumberFormat("pt-BR").format(Number(n)||0);
 const money=(c)=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format((Number(c)||0)/100);
 export function CommercialOverview(){
- const [data,setData]=useState(null),[error,setError]=useState("");
- const load=useCallback(()=>api(BASE+"/commercial").then(setData).catch(e=>setError(e.message)),[]);
+ const [data,setData]=useState(null),[plan,setPlan]=useState(null),[error,setError]=useState("");
+ const load=useCallback(()=>Promise.all([api(BASE+"/commercial"),api(BASE+"/service-plan")]).then(([d,p])=>{setData(d);setPlan(p)}).catch(e=>setError(e.message)),[]);
  useEffect(()=>{void load()},[load]);
  return <div className="panel commerce"><div className="panelhead"><div><h2>Contrato e licenças</h2><p>Condições definidas pela administração da Delta TV</p></div><button className="outline" onClick={load}>Atualizar</button></div>
   {error&&<div className="alert">{error}</div>}
   {!data?<div className="empty">Carregando condições comerciais…</div>:<>
    <div className="commercial-stats">
     {[ ["Ativações em uso",fmt(data.activeDevices)], ["Créditos na carteira",fmt(data.creditBalance)], ["Alocados nos códigos",fmt(data.availableCodeCredits)], ["Créditos consumidos",fmt(data.spentCredits)] ].map(([l,n])=><div className="commercial-stat" key={l}><small>{l}</small><b>{n}</b></div>)}
-   </div><div className="commercial-info"><b>Modalidade:</b> {MODES[data.terms.mode]||data.terms.mode}</div>
+   </div><div className="commercial-info"><b>Plano de recursos:</b> {plan?.features?.label||"—"} · {plan?.features?.maxServers??"—"} URL(s) por código · Failover {plan?.features?.autoFailover?"incluído":"não incluído"}</div>
+   <div className="commercial-info"><b>Modalidade comercial:</b> {MODES[data.terms.mode]||data.terms.mode}</div>
    {(data.terms.mode==="credits"||data.terms.mode==="fixed_limited")&&<div className="commercial-info"><b>Licenças/ativações restantes:</b> {fmt(data.remainingActivations)}</div>}
    {data.terms.mode==="fixed_limited"&&<div className="commercial-info"><b>Limite de ativações:</b> {fmt(data.terms.activationLimit)} · Restantes: {fmt(data.remainingActivations)}</div>}
    {data.terms.mode.startsWith("fixed_")&&<div className="commercial-info"><b>Mensalidade negociada:</b> {money(data.terms.fixedFeeCents)}</div>}
