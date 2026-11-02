@@ -10,3 +10,15 @@
 .server-option.selected{border-color:#6495ed;background:#1d3557}.server-option input{width:18px;height:18px;flex-shrink:0;accent-color:#3979ed}
 .server-option small{display:block;color:#a1b2cd;margin-top:5px;font-size:11px}.server-status{text-align:right;display:grid;justify-items:end;gap:5px;flex-shrink:0}
 @media(max-width:700px){.server-option{flex-wrap:wrap}.server-option .grow{min-width:0;flex-basis:calc(100% - 35px)}.server-status{width:100%;display:flex;align-items:center;justify-content:space-between}}
+/* Contratos e dispositivos: sem scroll horizontal em telas estreitas */
+.commerce{margin-bottom:20px}.commercial-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding:18px}
+.commercial-stat{background:#1b2c48;padding:16px;border:1px solid #334563;border-radius:13px;min-width:0}
+.commercial-stat small{display:block;color:#9eb3d3;font-size:12px}.commercial-stat b{display:block;font-size:23px;margin-top:8px}
+.commercial-info{padding:12px 18px;border-top:1px solid #293b58;overflow-wrap:anywhere;color:#c6d7eb;font-size:13px}
+.commerce .hint{padding:0 18px 15px;color:#91a9c9;font-size:12px}
+.device-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.device-row{background:#17263e;border:1px solid #314566;border-radius:16px;padding:18px;min-width:0}
+.device-top{display:flex;justify-content:space-between;align-items:center;gap:8px}.device-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:15px 0}
+.device-meta div{min-width:0}.device-meta small{display:block;color:#91a7c6;font-size:11px;margin-bottom:5px}.device-meta strong{display:block;overflow-wrap:anywhere;font-size:13px}
+.device-action{width:100%;color:#ffbdc5}
+@media(max-width:1100px){.commercial-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.device-list{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:700px){.device-meta{grid-template-columns:minmax(0,1fr)}.commercial-stats{padding:12px;gap:8px}.commercial-stat{padding:11px}.commercial-stat b{font-size:21px}.device-top{flex-wrap:wrap}}
