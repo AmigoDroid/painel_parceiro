@@ -16,8 +16,9 @@ export default function App(){
  const showHistory=async server=>{setHistory({name:server.name,loading:true,data:[],error:""});try{
   const r=await api(`${BASE}/servers/${server.id}/history`);setHistory({name:server.name,loading:false,data:r.data||[],error:""});
  }catch(e){setHistory({name:server.name,loading:false,data:[],error:e.message})}};
- const maxCodeServers=data?.servicePlan?.features?.maxServers??8;
- const canPoolEdit=maxCodeServers>1 && !!data?.servicePlan?.features?.autoFailover;
+ const maxCodeServers=data?.servicePlan?.features?.maxServers ?? null;
+ const maxCodeServersLabel=maxCodeServers == null ? "um número ilimitado de" : `até ${maxCodeServers}`;
+ const canPoolEdit=(maxCodeServers == null || maxCodeServers > 1) && !!data?.servicePlan?.features?.autoFailover;
  const [codes,setCodes]=useState({rows:[],count:0,page:1,pageSize:25});
  const [codePage,setCodePage]=useState(1),[codeReload,setCodeReload]=useState(0);
  const refresh=useCallback(async()=>{if(!getAuth())return;try{const d=await api(BASE+"/overview");setData(d);setError("");}catch(e){setError(e.message)}},[]);
@@ -34,7 +35,7 @@ export default function App(){
  const toggleServer=(id)=>setPoolForm(current=>{
    if(!current)return current;
    const have=current.serverIds.includes(id);
-   return {...current,serverIds:have?current.serverIds.filter(x=>x!==id):current.serverIds.length<maxCodeServers?[...current.serverIds,id]:current.serverIds};
+   return {...current,serverIds:have?current.serverIds.filter(x=>x!==id):(maxCodeServers == null || current.serverIds.length<maxCodeServers)?[...current.serverIds,id]:current.serverIds};
  });
  const signIn=async e=>{e.preventDefault();setLoading(true);setError("");try{await login(credentials.email,credentials.password);setUser(getAuth()?.user);setCredentials({email:"",password:""});}catch(e){setError(e.message)}finally{setLoading(false)}};
  const signOut=async()=>{await logout();setUser(null);setData({providers:[],codes:[],monitorEnabled:false})};
@@ -53,7 +54,7 @@ export default function App(){
  {screen==="servers"&&<><div className="heading"><p>Cadastre URLs alternativas e monitore a resposta de cada servidor. Não confunda disponibilidade HTTP com reprodução garantida.</p><button className="primary" onClick={()=>setForm({name:"",baseUrl:"",priority:0,status:"active"})}>+ Adicionar servidor</button></div><div className="cards">{data.providers.map(s=><article className="servercard" key={s.id}><div className="between"><div className="iconglow">▤</div><State health={s.health}/></div><h3>{s.name}</h3><p className="break">{s.baseUrl}</p><div className="two"><span>Latência</span><b>{s.health?.latencyMs!=null?`${s.health.latencyMs} ms`:"—"}</b></div><div className="two"><span>Prioridade configurada</span><b>{s.priority}</b></div><div className="two"><span>Prioridade em tempo real</span><b>#{s.effectivePriority||"—"} {data.autoPriority?"(automática)":"(manual)"}</b></div><div className="two"><span>Última verificação</span><b>{s.health?.lastCheckedAt?new Date(s.health.lastCheckedAt).toLocaleString("pt-BR"):"—"}</b></div>{s.health?.lastError&&<div className="errorline">{s.health.lastError}</div>}<button className="outline wide" onClick={()=>setForm(s)}>Editar servidor</button>
  {data.servicePlan?.features?.detailedHistory&&<button className="outline wide" onClick={()=>showHistory(s)}>Histórico de quedas (Premium)</button>}</article>)}{!data.providers.length&&<div className="empty">Adicione o primeiro servidor para começar.</div>}</div></>}
  {screen==="codes"&&<>
-  <div className="heading"><p>Seu plano permite até {maxCodeServers} URL(s) por código. {data.servicePlan?.features?.autoFailover?"Failover automático disponível.":"Failover automático não incluído."} A seleção é verificada no backend.</p>
+  <div className="heading"><p>Seu plano permite {maxCodeServers == null ? "URLs ilimitadas" : `até ${maxCodeServers} URL(s)`} por código. {data.servicePlan?.features?.autoFailover?"Failover automático disponível.":"Failover automático não incluído."} A seleção é verificada no backend.</p>
     <input className="search" value={search} onChange={e=>{setSearch(e.target.value);setCodePage(1)}} placeholder="Buscar código ou descrição"/>
     <button className="primary" onClick={()=>setCodeForm({code:"",label:"",providerId:data.providers.find(p=>p.status==="active")?.id||""})}>+ Novo código</button>
   </div>
@@ -90,16 +91,16 @@ export default function App(){
  </div>}
  {poolForm&&<div className="overlay" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setPoolForm(null)}}>
   <form className="modal" onSubmit={savePool}>
-   <div className="between"><div><h2>Servidores do código {poolForm.code}</h2><p className="modalhelp">Escolha entre 1 e {maxCodeServers} URLs equivalentes. O backend valida os limites do plano e a compatibilidade das credenciais.</p></div>
+   <div className="between"><div><h2>Servidores do código {poolForm.code}</h2><p className="modalhelp">Escolha {maxCodeServers == null ? "quantas URLs equivalentes precisar" : `entre 1 e ${maxCodeServers} URLs equivalentes`}. O backend valida os limites do plano e a compatibilidade das credenciais.</p></div>
     <button type="button" className="close" onClick={()=>setPoolForm(null)}>×</button></div>
    <div className="servers-picker">{data.providers.filter(p=>p.status==="active").map(p=><label key={p.id} className={`server-option ${poolForm.serverIds.includes(p.id)?"selected":""}`}>
     <input type="checkbox" checked={poolForm.serverIds.includes(p.id)} onChange={()=>toggleServer(p.id)}/>
     <div className="grow"><b>{p.name}</b><small className="break">{p.baseUrl}</small></div>
     <div className="server-status"><State health={p.health}/><small>{p.health?.latencyMs!=null?`${p.health.latencyMs}ms`:"Sem medição"}</small></div>
    </label>)}</div>
-   <p className="modalhelp">{poolForm.serverIds.length}/{maxCodeServers} URLs selecionadas. Ordem de seleção define a URL padrão; o monitor prioriza as saudáveis e mais rápidas.</p>
+   <p className="modalhelp">{poolForm.serverIds.length} URL(s) selecionada(s) · {maxCodeServersLabel} permitidas. Ordem de seleção define a URL padrão; o monitor prioriza as saudáveis e mais rápidas.</p>
    <div className="modalfoot"><button type="button" className="outline" onClick={()=>setPoolForm(null)}>Cancelar</button>
-    <button className="primary" disabled={saving||poolForm.serverIds.length<1||poolForm.serverIds.length>maxCodeServers}>{saving?"Salvando…":"Salvar URLs"}</button></div>
+    <button className="primary" disabled={saving||poolForm.serverIds.length<1||(maxCodeServers !== null && poolForm.serverIds.length>maxCodeServers)}>{saving?"Salvando…":"Salvar URLs"}</button></div>
   </form>
  </div>}</div>;
 }

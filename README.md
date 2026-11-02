@@ -16,4 +16,4 @@ Monitoramento no servidor desligado por padrão; configure após homologação. 
 
 ## Códigos com múltiplos servidores
 
-Em **Códigos de parceria → Configurar URLs**, selecione de 1 a 8 servidores ativos da mesma parceria. A lista de códigos é paginada no backend (25 por página), com busca no PostgreSQL, para não carregar milhares de registros no celular. O monitor e o resolvedor rodam **na API**, não no Vite nem no Nginx. Consulte `SMART_FAILOVER_README.md` no pacote do backend.
+Em **Códigos de parceria → Configurar URLs**, selecione os servidores ativos da mesma parceria, respeitando o plano (agora sem teto global de oito URLs). A lista de códigos é paginada no backend (25 por página), com busca no PostgreSQL, para não carregar milhares de registros no celular. O monitor e o resolvedor rodam **na API**, não no Vite nem no Nginx. Consulte `SMART_FAILOVER_README.md` no pacote do backend.

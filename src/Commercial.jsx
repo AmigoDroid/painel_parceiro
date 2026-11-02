@@ -13,7 +13,7 @@ export function CommercialOverview(){
   {!data?<div className="empty">Carregando condições comerciais…</div>:<>
    <div className="commercial-stats">
     {[ ["Ativações em uso",fmt(data.activeDevices)], ["Créditos na carteira",fmt(data.creditBalance)], ["Alocados nos códigos",fmt(data.availableCodeCredits)], ["Créditos consumidos",fmt(data.spentCredits)] ].map(([l,n])=><div className="commercial-stat" key={l}><small>{l}</small><b>{n}</b></div>)}
-   </div><div className="commercial-info"><b>Plano de recursos:</b> {plan?.features?.label||"—"} · {plan?.features?.maxServers??"—"} URL(s) por código · Failover {plan?.features?.autoFailover?"incluído":"não incluído"}</div>
+   </div><div className="commercial-info"><b>Plano de recursos:</b> {plan?.features?.label||"—"} · {plan?.features?.maxServers == null ? "URLs ilimitadas" : `${plan.features.maxServers} URL(s)`} por código · Failover {plan?.features?.autoFailover?"incluído":"não incluído"}</div>
    <div className="commercial-info"><b>Modalidade comercial:</b> {MODES[data.terms.mode]||data.terms.mode}</div>
    {(data.terms.mode==="credits"||data.terms.mode==="fixed_limited")&&<div className="commercial-info"><b>Licenças/ativações restantes:</b> {fmt(data.remainingActivations)}</div>}
    {data.terms.mode==="fixed_limited"&&<div className="commercial-info"><b>Limite de ativações:</b> {fmt(data.terms.activationLimit)} · Restantes: {fmt(data.remainingActivations)}</div>}
