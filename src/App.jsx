@@ -3,7 +3,7 @@ import { api,login,logout,getAuth } from "./api.js";
 import {CommercialOverview,PartnerDevices,CreditAllocationModal} from "./Commercial.jsx";
 const BASE="/content-partner";
 const Label=({children})=><label className="label">{children}</label>;
-const healthNames={healthy:"Saudável",down:"Indisponível",suspect:"Falha detectada",checking:"Em verificação",unknown:"Aguardando"};
+const healthNames={healthy:"Saudável",slow:"Lento",down:"Indisponível",suspect:"Falha detectada",checking:"Em verificação",unknown:"Aguardando"};
 function State({health}) { const state=health?.state||"unknown";return <span className={`pill ${state}`}>{healthNames[state]||state}</span> }
 export default function App(){
  const [user,setUser]=useState(getAuth()?.user||null),[screen,setScreen]=useState("overview");
