@@ -6,3 +6,5 @@
 .invite-card .primary{margin-top:12px}.invite-help{font-size:12px;margin-top:15px}
 .invite-back{display:block;margin:20px auto 0;background:none;color:#a9c8fc;padding:8px;text-decoration:underline}
 @media(max-width:450px){.invite-card{padding:22px}.invite-card h1{font-size:23px}}
+
+.invite-progress{height:4px;margin:28px 0 12px;border-radius:6px;background:linear-gradient(90deg,#4a65b7,#8e84ff,#4a65b7);background-size:200% 100%;animation:invite-loading 1.8s ease-in-out infinite}@keyframes invite-loading{from{background-position:200% 0}to{background-position:-200% 0}}

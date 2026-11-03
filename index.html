@@ -7,16 +7,23 @@
   <meta name="referrer" content="no-referrer"/>
   <title>Delta TV | Painel do Parceiro</title>
   <script>
-  // O link enviado por e-mail usa ?convite= porque rastreadores podem remover #convite=.
-  // Captura e apaga o segredo da URL antes de carregar arquivos do aplicativo.
+  // Captura o convite antes de carregar o React. Nenhum token fica no URL
+  // depois desse ponto, nem deve ser enviado como parâmetro nas chamadas à API.
   (() => {
     const url = new URL(window.location.href);
+    const viaPath = url.pathname === "/convite" || url.pathname.startsWith("/convite/");
+    const routeToken = viaPath ? (url.pathname.match(/^\/convite\/([^/]+)\/?$/)?.[1] || "") : "";
     const hashParams = new URLSearchParams(url.hash.startsWith("#") ? url.hash.slice(1) : "");
-    const token = url.searchParams.get("convite") || hashParams.get("convite");
-    if (!token) return;
-    Object.defineProperty(window, "__DELTA_PARTNER_INVITE_TOKEN__", { value: token, configurable: true });
+    const viaQuery = url.searchParams.has("convite");
+    const viaHash = hashParams.has("convite");
+    if (!viaPath && !viaQuery && !viaHash) return;
+    const token = routeToken || url.searchParams.get("convite") || hashParams.get("convite") || "";
+    Object.defineProperty(window, "__DELTA_PARTNER_INVITE_REQUEST__", {
+      value: { token }, configurable: true
+    });
+    if (viaPath) url.pathname = "/";
     url.searchParams.delete("convite");
-    if (hashParams.has("convite")) url.hash = "";
+    if (viaHash) url.hash = "";
     window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
   })();
   </script>

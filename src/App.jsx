@@ -5,7 +5,7 @@ import { Customers, LicensesAndActivations, Messages, AccessHistory, BillingHist
 import { connectRealtime } from "./realtime.js";
 import Icon from "./Icon.jsx";
 import InviteRegistration from "./InviteRegistration.jsx";
-import { consumeInviteToken } from "./invite-link.js";
+import { consumeInviteRequest } from "./invite-link.js";
 const NAV_GROUPS=[
  {label:"Visão geral",items:[["overview","Início","dashboard"]]},
  {label:"Atendimento",items:[["customers","Clientes","users"],["devices","Dispositivos","monitor"],["licenses","Licenças","shield"]]},
@@ -32,26 +32,21 @@ const SCREEN_SUBTITLES={
 };
 const SCREEN_TITLES=Object.fromEntries(NAV_GROUPS.flatMap(g=>g.items.map(i=>[i[0],i[1]])));
 
+// Importante: capturar apenas uma vez. React.StrictMode chama inicializadores duas
+// vezes em desenvolvimento; uma leitura destrutiva no useState perderia o convite.
+const INITIAL_INVITE = consumeInviteRequest();
 const BASE="/content-partner";
 const Label=({children})=><label className="label">{children}</label>;
 const healthNames={healthy:"Saudável",slow:"Lento",down:"Indisponível",suspect:"Falha detectada",checking:"Em verificação",unknown:"Aguardando"};
 function State({health}) { const state=health?.state||"unknown";return <span className={`pill ${state}`}>{healthNames[state]||state}</span> }
-export default function App(){
+function PartnerPortalApp(){
  const [user,setUser]=useState(getAuth()?.user||null),[screen,setScreen]=useState("overview");
- const [inviteToken,setInviteToken]=useState(consumeInviteToken);
  const [data,setData]=useState({providers:[],codes:[],monitorEnabled:false}),[loading,setLoading]=useState(false),[error,setError]=useState("");
  const [saving,setSaving]=useState(false),[form,setForm]=useState(null),[codeForm,setCodeForm]=useState(null),[search,setSearch]=useState("");
  const [credentials,setCredentials]=useState({email:"",password:""});
  const [poolForm,setPoolForm]=useState(null),[editCode,setEditCode]=useState(null);
  const [allocation,setAllocation]=useState(null);
  const [mobileMenu,setMobileMenu]=useState(false),[unread,setUnread]=useState(0),[profileMenu,setProfileMenu]=useState(false);
- // Links legados com #convite também devem funcionar ao mudar o hash na aba já aberta.
- useEffect(()=>{
-  const onInviteNavigation=()=>{const token=consumeInviteToken();if(token)setInviteToken(token)};
-  window.addEventListener("hashchange",onInviteNavigation);
-  window.addEventListener("popstate",onInviteNavigation);
-  return()=>{window.removeEventListener("hashchange",onInviteNavigation);window.removeEventListener("popstate",onInviteNavigation)};
- },[]);
  useEffect(()=>connectRealtime(),[]);
  useEffect(()=>{
   const onEscape=e=>{if(e.key==="Escape"){setProfileMenu(false);setMobileMenu(false)}};
@@ -108,7 +103,6 @@ export default function App(){
   }catch(e){setError(e.message)}finally{setSaving(false)}};
  const revoke=async c=>{if(!window.confirm(`Revogar o código ${c.code}? Dispositivos já ativados permanecem ativos.`))return;try{await api(`${BASE}/codes/${c.id}/revoke`,{method:"POST"});reloadCodeList()}catch(e){setError(e.message)}};
  const visibleCodes=codes.rows;
- if(inviteToken)return <InviteRegistration token={inviteToken} onBack={()=>setInviteToken(null)}/>;
  if(!user)return <main className="loginwrap"><form className="login" onSubmit={signIn}><div className="brandico brandico-login">D</div><h1>Delta TV <span>Parceiros</span></h1><p>Servidores, parcerias e disponibilidade em um só lugar.</p><Label>E-mail</Label><input type="email" required autoComplete="username" value={credentials.email} onChange={e=>setCredentials({...credentials,email:e.target.value})} placeholder="seu@email.com"/><Label>Senha</Label><input type="password" required autoComplete="current-password" value={credentials.password} onChange={e=>setCredentials({...credentials,password:e.target.value})} placeholder="••••••••"/>{error&&<div className="alert">{error}</div>}<button disabled={loading} className="primary wide">{loading?"Entrando…":"Entrar no painel"}</button><small>Uso exclusivo dos parceiros de conteúdo Delta TV.</small></form></main>;
  return <div className="shell">
  {mobileMenu&&<button className="partner-scrim" aria-label="Fechar navegação" onClick={()=>setMobileMenu(false)}/>}
@@ -189,4 +183,20 @@ export default function App(){
     <button className="primary" disabled={saving||poolForm.serverIds.length<1||(maxCodeServers !== null && poolForm.serverIds.length>maxCodeServers)}>{saving?"Salvando…":"Salvar URLs"}</button></div>
   </form>
  </div>}</div>;
+}
+
+/** O formulário público tem prioridade absoluta sobre a sessão já existente. */
+export default function App() {
+ const [invite,setInvite]=useState(INITIAL_INVITE);
+ useEffect(()=>{
+  const onLocationChange=()=>{const request=consumeInviteRequest();if(request)setInvite(request)};
+  window.addEventListener("popstate",onLocationChange);
+  window.addEventListener("hashchange",onLocationChange);
+  return()=>{
+   window.removeEventListener("popstate",onLocationChange);
+   window.removeEventListener("hashchange",onLocationChange);
+  };
+ },[]);
+ if(invite)return <InviteRegistration token={invite.token} onBack={()=>setInvite(null)}/>;
+ return <PartnerPortalApp/>;
 }
