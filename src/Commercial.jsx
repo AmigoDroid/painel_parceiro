@@ -6,7 +6,7 @@ export const fmt=(n)=>new Intl.NumberFormat("pt-BR").format(Number(n)||0);
 const money=(c)=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format((Number(c)||0)/100);
 export function CommercialOverview(){
  const [data,setData]=useState(null),[plan,setPlan]=useState(null),[error,setError]=useState("");
- const load=useCallback(()=>Promise.all([api(BASE+"/commercial"),api(BASE+"/service-plan")]).then(([d,p])=>{setData(d);setPlan(p)}).catch(e=>setError(e.message)),[]);
+ const load=useCallback(()=>Promise.all([api(BASE+"/commercial"),api(BASE+"/service-plan")]).then(([d,p])=>{setData(d);setPlan(p);setError("")}).catch(e=>setError(e.message)),[]);
  useEffect(()=>{void load()},[load]);
  return <div className="panel commerce"><div className="panelhead"><div><h2>Contrato e licenças</h2><p>Condições definidas pela administração da Delta TV</p></div><button className="outline" onClick={load}>Atualizar</button></div>
   {error&&<div className="alert">{error}</div>}
@@ -31,10 +31,10 @@ export function PartnerDevices(){
   const reason=window.prompt("Motivo do desvínculo (obrigatório):", "Cliente saiu da parceria");if(!reason||reason.trim().length<3)return;
   setBusy(d.id);try{await api(`${BASE}/devices/${d.id}/revoke`,{method:"POST",body:{reason}});setTick(n=>n+1)}catch(e){setError(e.message)}finally{setBusy(null)};
  };
- return <section><div className="heading"><p>Ativações dos códigos desta parceria. Pesquisa no servidor e páginas de 20 para economizar memória.</p><input className="search" placeholder="Buscar MAC" value={q} onChange={e=>{setQ(e.target.value);setPage(1)}}/></div>
+ return <section><div className="heading"><p>Consulte as ativações da sua parceria. Use a pesquisa para localizar um dispositivo pelo MAC.</p><input className="search" placeholder="Buscar MAC" value={q} onChange={e=>{setQ(e.target.value);setPage(1)}}/></div>
   {error&&<div className="alert">{error}</div>}
   <div className="device-list">{data.data.map(d=><article className="device-row" key={d.id}>
-   <div className="device-top"><b className="mono break">{d.mac}</b><span className={`pill ${d.status==="active"?"healthy":d.status==="blocked"?"suspect":"down"}`}>{d.status}</span></div>
+   <div className="device-top"><b className="mono break">{d.mac}</b><span className={`pill ${d.status==="active"?"healthy":d.status==="blocked"?"suspect":"down"}`}>{{active:"Ativo",blocked:"Bloqueado",revoked:"Removido"}[d.status]||"Indisponível"}</span></div>
    <div className="device-meta"><div><small>Código</small><strong>{d.code||"Não informado"}</strong></div><div><small>Ativado em</small><strong>{new Date(d.activatedAt).toLocaleString("pt-BR")}</strong></div><div><small>Origem da licença</small><strong>{d.licenseSource==="reseller_stock"?"Estoque de revenda":"Parceria"}</strong></div></div>
    {d.status!=="revoked"&&<button className="outline device-action" disabled={busy===d.id} onClick={()=>unlink(d)}>{busy===d.id?"Processando…":"Desvincular desta parceria"}</button>}
   </article>)}{!data.data.length&&<div className="empty">Nenhum dispositivo encontrado.</div>}</div>

@@ -48,6 +48,7 @@ function PartnerPortalApp(){
  const [allocation,setAllocation]=useState(null);
  const [mobileMenu,setMobileMenu]=useState(false),[unread,setUnread]=useState(0),[profileMenu,setProfileMenu]=useState(false);
  useEffect(()=>connectRealtime(),[]);
+ useEffect(()=>{const sync=()=>setUser(getAuth()?.user||null);window.addEventListener("auth-changed",sync);return()=>window.removeEventListener("auth-changed",sync)},[]);
  useEffect(()=>{
   const onEscape=e=>{if(e.key==="Escape"){setProfileMenu(false);setMobileMenu(false)}};
   window.addEventListener("keydown",onEscape);
@@ -98,7 +99,7 @@ function PartnerPortalApp(){
  await api(BASE+(form.id?`/servers/${form.id}`:"/servers"),{method:form.id?"PATCH":"POST",body});setForm(null);await refresh();}catch(e){setError(e.message)}finally{setSaving(false)}};
  const createCode=async e=>{e.preventDefault();setSaving(true);setError("");try{await api(BASE+"/codes",{method:"POST",body:{code:codeForm.code||undefined,label:codeForm.label||undefined,providerId:codeForm.providerId}});setCodeForm(null);reloadCodeList()}catch(e){setError(e.message)}finally{setSaving(false)}};
  const saveCode=async e=>{e.preventDefault();setSaving(true);setError("");try{
-   await api(`${BASE}/codes/${editCode.id}`,{method:"PATCH",body:{label:editCode.label||"",maxActivations:editCode.maxActivations===""?null:Number(editCode.maxActivations),allowWebIssuance:!!editCode.allowWebIssuance,expiresAt:editCode.expiresAt||null}});
+   await api(`${BASE}/codes/${editCode.id}`,{method:"PATCH",body:{label:editCode.label||"",maxActivations:editCode.maxActivations===""?null:Number(editCode.maxActivations),allowWebIssuance:!!editCode.allowWebIssuance,expiresAt:editCode.expiresAt?(editCode.originalExpiresAt&&new Intl.DateTimeFormat("en-CA",{timeZone:"America/Sao_Paulo"}).format(new Date(editCode.originalExpiresAt))===editCode.expiresAt?editCode.originalExpiresAt:new Date(`${editCode.expiresAt}T23:59:59-03:00`).toISOString()):null}});
    setEditCode(null);reloadCodeList();
   }catch(e){setError(e.message)}finally{setSaving(false)}};
  const revoke=async c=>{if(!window.confirm(`Revogar o código ${c.code}? Dispositivos já ativados permanecem ativos.`))return;try{await api(`${BASE}/codes/${c.id}/revoke`,{method:"POST"});reloadCodeList()}catch(e){setError(e.message)}};
@@ -117,7 +118,7 @@ function PartnerPortalApp(){
  {error&&<div className="alert">{error}</div>}
  {unread>0&&screen!=="notifications"&&<div className="partner-unread" role="status"><span className="alert-content"><Icon name="bell" size={20}/> Você tem <b>{unread} comunicado(s) não lido(s)</b> da Delta TV.</span><button className="primary" onClick={()=>navigate("notifications")}>Ver mensagens</button></div>}
  {data.providers.some(p=>["slow","suspect","down"].includes(p.health?.state))&&! ["servers","monitor"].includes(screen)&&<div className="partner-alert" role="status"><span className="alert-content"><Icon name="alert" size={20}/> Há servidores da sua parceria com lentidão ou indisponibilidade.</span><button className="outline" onClick={()=>navigate("monitor")}>Ver monitoramento</button></div>}
- {!data.monitorEnabled&&["overview","servers","monitor"].includes(screen)&&<div className="notice">O monitor automático está desligado. Ative-o no backend após testar as verificações e o SMTP.</div>}
+ {!data.monitorEnabled&&["overview","servers","monitor"].includes(screen)&&<div className="notice">O monitor automático está desligado. Solicite à administração a ativação do monitoramento.</div>}
  {screen==="customers"&&<Customers/>}
  {screen==="licenses"&&<LicensesAndActivations/>}
  {screen==="web"&&<WebPlayer/>}
@@ -143,8 +144,8 @@ function PartnerPortalApp(){
     <div><small className="m-label">Código</small><b className="mono">{c.code}</b></div>
     <div><small className="m-label">Descrição</small>{c.label||"Sem descrição"}</div>
     <div><small className="m-label">URLs vinculadas</small><div className="code-actions"><span className="pill checking">{c.serverIds.length} URL(s)</span><span className={`pill ${c.allowWebIssuance?"healthy":"checking"}`}>{c.allowWebIssuance?"Player Web liberado":"Player Web restrito"}</span>
-      {canPoolEdit&&<button className="outline" onClick={()=>setPoolForm({id:c.id,code:c.code,serverIds:[...c.serverIds]})}>Configurar URLs</button>}<span className="pill checking">{c.credits?.available||0} créditos · {c.activationCount||0}{c.maxActivations!=null?`/${c.maxActivations}`:""} ativações</span><button className="outline" onClick={()=>setAllocation(c)}>Alocar créditos</button><button className="outline" onClick={()=>setEditCode({id:c.id,code:c.code,label:c.label||"",maxActivations:c.maxActivations??"",allowWebIssuance:!!c.allowWebIssuance,expiresAt:""})}>Editar código</button></div></div>
-    <div><small className="m-label">Status</small><span className="pill healthy">{c.status}</span>
+      {canPoolEdit&&<button className="outline" onClick={()=>setPoolForm({id:c.id,code:c.code,serverIds:[...c.serverIds]})}>Configurar URLs</button>}<span className="pill checking">{c.credits?.available||0} créditos · {c.activationCount||0}{c.maxActivations!=null?`/${c.maxActivations}`:""} ativações</span><button className="outline" onClick={()=>setAllocation(c)}>Alocar créditos</button><button className="outline" onClick={()=>setEditCode({id:c.id,code:c.code,label:c.label||"",maxActivations:c.maxActivations??"",allowWebIssuance:!!c.allowWebIssuance,originalExpiresAt:c.expiresAt||null,expiresAt:c.expiresAt?new Intl.DateTimeFormat("en-CA",{timeZone:"America/Sao_Paulo"}).format(new Date(c.expiresAt)):""})}>Editar código</button></div></div>
+    <div><small className="m-label">Status</small><span className={`pill ${c.status==="active"?"healthy":"checking"}`}>{{active:"Ativo",revoked:"Revogado",expired:"Expirado"}[c.status]||c.status}</span>
       {c.status==="active"&&<button className="revoke" onClick={()=>revoke(c)}>Revogar</button>}</div>
    </div>)}
    {!visibleCodes.length&&<div className="empty">Nenhum código encontrado.</div>}
