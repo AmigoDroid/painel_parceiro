@@ -1,0 +1,23 @@
+Delta TV | Correcao do erro ao abrir cadastro do Parceiro
+
+Causa identificada na revisao do codigo-fonte:
+O arquivo src/InviteRegistration.jsx usa JSX, mas nao importava React.
+O painel fornecido nao possui vite.config.js habilitando o JSX automatico.
+Com o JSX classico do esbuild/Vite, o codigo gerado usa React.createElement,
+causando ReferenceError: React is not defined e ativando InviteErrorBoundary.
+
+Mudanca exclusiva:
+  import { useEffect, useState } from "react";
+virou:
+  import React, { useEffect, useState } from "react";
+
+INSTALACAO (preservando arquivos nao relacionados):
+1. Faca backup de /var/www/painel_parceiro/src/InviteRegistration.jsx
+2. Substitua apenas esse arquivo pelo incluido em src/InviteRegistration.jsx
+3. Na pasta /var/www/painel_parceiro, execute npm run build
+4. Confirme o diretorio dist servido pelo Nginx; se for diferente, publique o build.
+5. Teste /convite/TESTE: mensagem de convite invalido, nao erro de renderizacao.
+6. Reenvie convite real (especialmente se ele tiver sido divulgado) e teste.
+
+Nao requer atualizacao de backend, migrations, Nginx ou .env.
+Nao foi executado build completo local por ausencia de dependencias npm.
