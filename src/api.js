@@ -91,3 +91,7 @@ export async function deviceApi(path, { method = "GET", body, token } = {}) {
 
 // Cadastro público de revendedor (sem login). A resposta é a mesma para qualquer e-mail.
 export const registerReseller = (body) => raw("/auth/register-reseller", { method: "POST", body });
+
+// Convites de parceria: rotas públicas, segredo sempre no corpo POST.
+export const verifyPartnerInvite = (token) => raw("/auth/partner-invite/verify", { method: "POST", body: { token } });
+export const completePartnerInvite = (body) => raw("/auth/partner-invite/complete", { method: "POST", body });

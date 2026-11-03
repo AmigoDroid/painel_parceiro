@@ -4,6 +4,7 @@ import {CommercialOverview,PartnerDevices,CreditAllocationModal} from "./Commerc
 import { Customers, LicensesAndActivations, Messages, AccessHistory, BillingHistory, AppDownloads, CreditsLedger, WebPlayer, PartnerAccount } from "./PartnerOperations.jsx";
 import { connectRealtime } from "./realtime.js";
 import Icon from "./Icon.jsx";
+import InviteRegistration, { readInviteFromFragment } from "./InviteRegistration.jsx";
 const NAV_GROUPS=[
  {label:"Visão geral",items:[["overview","Início","dashboard"]]},
  {label:"Atendimento",items:[["customers","Clientes","users"],["devices","Dispositivos","monitor"],["licenses","Licenças","shield"]]},
@@ -36,6 +37,7 @@ const healthNames={healthy:"Saudável",slow:"Lento",down:"Indisponível",suspect
 function State({health}) { const state=health?.state||"unknown";return <span className={`pill ${state}`}>{healthNames[state]||state}</span> }
 export default function App(){
  const [user,setUser]=useState(getAuth()?.user||null),[screen,setScreen]=useState("overview");
+ const [inviteToken,setInviteToken]=useState(readInviteFromFragment);
  const [data,setData]=useState({providers:[],codes:[],monitorEnabled:false}),[loading,setLoading]=useState(false),[error,setError]=useState("");
  const [saving,setSaving]=useState(false),[form,setForm]=useState(null),[codeForm,setCodeForm]=useState(null),[search,setSearch]=useState("");
  const [credentials,setCredentials]=useState({email:"",password:""});
@@ -98,6 +100,7 @@ export default function App(){
   }catch(e){setError(e.message)}finally{setSaving(false)}};
  const revoke=async c=>{if(!window.confirm(`Revogar o código ${c.code}? Dispositivos já ativados permanecem ativos.`))return;try{await api(`${BASE}/codes/${c.id}/revoke`,{method:"POST"});reloadCodeList()}catch(e){setError(e.message)}};
  const visibleCodes=codes.rows;
+ if(inviteToken)return <InviteRegistration token={inviteToken} onBack={()=>setInviteToken(null)}/>;
  if(!user)return <main className="loginwrap"><form className="login" onSubmit={signIn}><div className="brandico brandico-login">D</div><h1>Delta TV <span>Parceiros</span></h1><p>Servidores, parcerias e disponibilidade em um só lugar.</p><Label>E-mail</Label><input type="email" required autoComplete="username" value={credentials.email} onChange={e=>setCredentials({...credentials,email:e.target.value})} placeholder="seu@email.com"/><Label>Senha</Label><input type="password" required autoComplete="current-password" value={credentials.password} onChange={e=>setCredentials({...credentials,password:e.target.value})} placeholder="••••••••"/>{error&&<div className="alert">{error}</div>}<button disabled={loading} className="primary wide">{loading?"Entrando…":"Entrar no painel"}</button><small>Uso exclusivo dos parceiros de conteúdo Delta TV.</small></form></main>;
  return <div className="shell">
  {mobileMenu&&<button className="partner-scrim" aria-label="Fechar navegação" onClick={()=>setMobileMenu(false)}/>}
