@@ -2,15 +2,6 @@ import { useEffect, useState } from "react";
 import { completePartnerInvite, verifyPartnerInvite } from "./api.js";
 import "./invite.css";
 
-/** Token é recebido por fragmento (#), nunca enviado ao servidor web no pedido da página. */
-export function readInviteFromFragment() {
-  const h = window.location.hash;
-  if (!h) return null;
-  const t = new URLSearchParams(h.substring(1)).get("convite");
-  if (t) window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search);
-  return t || null;
-}
-
 export default function InviteRegistration({ token, onBack }) {
   const [invitation, setInvitation] = useState(null);
   const [companyName, setCompanyName] = useState("");

@@ -1,1 +1,25 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><meta name="theme-color" content="#090d17"/><title>Delta TV | Painel do Parceiro</title></head><body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body></html>
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="theme-color" content="#090d17"/>
+  <meta name="referrer" content="no-referrer"/>
+  <title>Delta TV | Painel do Parceiro</title>
+  <script>
+  // O link enviado por e-mail usa ?convite= porque rastreadores podem remover #convite=.
+  // Captura e apaga o segredo da URL antes de carregar arquivos do aplicativo.
+  (() => {
+    const url = new URL(window.location.href);
+    const hashParams = new URLSearchParams(url.hash.startsWith("#") ? url.hash.slice(1) : "");
+    const token = url.searchParams.get("convite") || hashParams.get("convite");
+    if (!token) return;
+    Object.defineProperty(window, "__DELTA_PARTNER_INVITE_TOKEN__", { value: token, configurable: true });
+    url.searchParams.delete("convite");
+    if (hashParams.has("convite")) url.hash = "";
+    window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+  })();
+  </script>
+</head>
+<body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body>
+</html>

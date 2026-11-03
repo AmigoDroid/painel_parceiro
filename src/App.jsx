@@ -4,7 +4,8 @@ import {CommercialOverview,PartnerDevices,CreditAllocationModal} from "./Commerc
 import { Customers, LicensesAndActivations, Messages, AccessHistory, BillingHistory, AppDownloads, CreditsLedger, WebPlayer, PartnerAccount } from "./PartnerOperations.jsx";
 import { connectRealtime } from "./realtime.js";
 import Icon from "./Icon.jsx";
-import InviteRegistration, { readInviteFromFragment } from "./InviteRegistration.jsx";
+import InviteRegistration from "./InviteRegistration.jsx";
+import { consumeInviteToken } from "./invite-link.js";
 const NAV_GROUPS=[
  {label:"Visão geral",items:[["overview","Início","dashboard"]]},
  {label:"Atendimento",items:[["customers","Clientes","users"],["devices","Dispositivos","monitor"],["licenses","Licenças","shield"]]},
@@ -37,13 +38,20 @@ const healthNames={healthy:"Saudável",slow:"Lento",down:"Indisponível",suspect
 function State({health}) { const state=health?.state||"unknown";return <span className={`pill ${state}`}>{healthNames[state]||state}</span> }
 export default function App(){
  const [user,setUser]=useState(getAuth()?.user||null),[screen,setScreen]=useState("overview");
- const [inviteToken,setInviteToken]=useState(readInviteFromFragment);
+ const [inviteToken,setInviteToken]=useState(consumeInviteToken);
  const [data,setData]=useState({providers:[],codes:[],monitorEnabled:false}),[loading,setLoading]=useState(false),[error,setError]=useState("");
  const [saving,setSaving]=useState(false),[form,setForm]=useState(null),[codeForm,setCodeForm]=useState(null),[search,setSearch]=useState("");
  const [credentials,setCredentials]=useState({email:"",password:""});
  const [poolForm,setPoolForm]=useState(null),[editCode,setEditCode]=useState(null);
  const [allocation,setAllocation]=useState(null);
  const [mobileMenu,setMobileMenu]=useState(false),[unread,setUnread]=useState(0),[profileMenu,setProfileMenu]=useState(false);
+ // Links legados com #convite também devem funcionar ao mudar o hash na aba já aberta.
+ useEffect(()=>{
+  const onInviteNavigation=()=>{const token=consumeInviteToken();if(token)setInviteToken(token)};
+  window.addEventListener("hashchange",onInviteNavigation);
+  window.addEventListener("popstate",onInviteNavigation);
+  return()=>{window.removeEventListener("hashchange",onInviteNavigation);window.removeEventListener("popstate",onInviteNavigation)};
+ },[]);
  useEffect(()=>connectRealtime(),[]);
  useEffect(()=>{
   const onEscape=e=>{if(e.key==="Escape"){setProfileMenu(false);setMobileMenu(false)}};
