@@ -11,13 +11,13 @@ const tok = 'AZ12345678azXY_ABCDEFGHIJKLMNOPQRSTUVWXYZ1234';
 test('novo link /convite/TOKEN abre fluxo mesmo com sessão e limpa URL', () => {
  const win = fakeWindow(`https://parceiro.deltatv.com.br/convite/${tok}?utm_source=email`);
  assert.equal(consumeInviteRequest(win)?.token, tok);
- assert.equal(win.location.href, 'https://parceiro.deltatv.com.br/?utm_source=email');
- assert.equal(consumeInviteRequest(win), null);
+ assert.equal(win.location.href, 'https://parceiro.deltatv.com.br/convite?utm_source=email');
+ assert.deepEqual(consumeInviteRequest(win), { token: '' });
 });
 test('rota /convite sem token nunca vira silenciosamente login', () => {
  const win = fakeWindow('https://parceiro.deltatv.com.br/convite/');
  assert.deepEqual(consumeInviteRequest(win), {token:''});
- assert.equal(win.location.pathname, '/');
+ assert.equal(win.location.pathname, '/convite');
 });
 test('link malformado de /convite não cai silenciosamente no login', () => {
  const win = fakeWindow('https://parceiro.deltatv.com.br/convite/a/b');
@@ -26,12 +26,12 @@ test('link malformado de /convite não cai silenciosamente no login', () => {
 test('query antiga continua suportada sem perder outras opções', () => {
  const win = fakeWindow(`https://parceiro.deltatv.com.br/?convite=${tok}&utm_medium=mail`);
  assert.equal(consumeInviteToken(win), tok);
- assert.equal(win.location.href, 'https://parceiro.deltatv.com.br/?utm_medium=mail');
+ assert.equal(win.location.href, 'https://parceiro.deltatv.com.br/convite?utm_medium=mail');
 });
 test('fragmento legado continua suportado', () => {
  const win = fakeWindow(`https://parceiro.deltatv.com.br/#convite=${tok}`);
  assert.equal(consumeInviteRequest(win)?.token, tok);
- assert.equal(win.location.href, 'https://parceiro.deltatv.com.br/');
+ assert.equal(win.location.href, 'https://parceiro.deltatv.com.br/convite');
 });
 test('token já capturado pelo index.html não é perdido', () => {
  const win = fakeWindow('https://parceiro.deltatv.com.br/', tok);

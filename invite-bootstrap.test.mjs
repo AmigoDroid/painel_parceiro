@@ -19,7 +19,7 @@ for (const [description,url] of [
  ['fragmento antigo',`https://parceiro.deltatv.com.br/#convite=${tok}`],
 ]) test(`HTML captura ${description} antes do React`,()=>{
  const win=boot(url);
- assert.equal(win.location.href,'https://parceiro.deltatv.com.br/');
+ assert.equal(win.location.href,'https://parceiro.deltatv.com.br/convite');
  assert.equal(consumeInviteRequest(win)?.token,tok);
  assert.equal('__DELTA_PARTNER_INVITE_REQUEST__' in win,false);
 });
