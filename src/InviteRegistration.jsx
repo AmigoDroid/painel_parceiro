@@ -55,6 +55,7 @@ export default function InviteRegistration({ token, onBack }) {
     setSubmitError("");
     try {
       await completePartnerInvite({ token, companyName: companyName.trim(), password });
+      try { sessionStorage.removeItem("delta-partner-pending-invite"); } catch {}
       setPassword("");
       setConfirmPassword("");
       setDone(true);

@@ -17,9 +17,10 @@ export function consumeInviteRequest(win = window) {
   const viaHash = legacyHash.has("convite");
   if (!viaPath && !viaQuery && !viaHash) return null;
   const token = routeToken || url.searchParams.get("convite") || legacyHash.get("convite") || "";
-  if (viaPath) url.pathname = "/";
+  if (viaPath || viaQuery || viaHash) url.pathname = "/convite";
   url.searchParams.delete("convite");
   if (viaHash) url.hash = "";
+  // A URL mostra a rota publica, mas nao expõe o segredo.
   win.history.replaceState(win.history.state, "", url.pathname + url.search + url.hash);
   return { token };
 }
