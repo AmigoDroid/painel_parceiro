@@ -4,6 +4,7 @@ import {CommercialOverview,PartnerDevices,CreditAllocationModal} from "./Commerc
 import { Customers, LicensesAndActivations, Messages, AccessHistory, BillingHistory, AppDownloads, CreditsLedger, WebPlayer, PartnerAccount } from "./PartnerOperations.jsx";
 import { connectRealtime } from "./realtime.js";
 import Icon from "./Icon.jsx";
+import WhiteLabelApps from "./WhiteLabelApps.jsx";
 import InviteRegistration from "./InviteRegistration.jsx";
 import { ForgotPassword } from "./PasswordReset.jsx";
 import "./password-reset.css";
@@ -11,7 +12,7 @@ import { consumeInviteRequest } from "./invite-link.js";
 const NAV_GROUPS=[
  {label:"Visão geral",items:[["overview","Início","dashboard"]]},
  {label:"Atendimento",items:[["customers","Clientes","users"],["devices","Dispositivos","monitor"],["licenses","Licenças","shield"]]},
- {label:"Ativação e conteúdo",items:[["codes","Códigos de parceria","key"],["web","Player Web","globe"],["servers","Servidores","server"],["monitor","Monitoramento","activity"],["downloads","Downloads e links","download"]]},
+ {label:"Ativação e conteúdo",items:[["codes","Códigos de parceria","key"],["white-label","Meus aplicativos","download"],["web","Player Web","globe"],["servers","Servidores","server"],["monitor","Monitoramento","activity"],["downloads","Downloads e links","download"]]},
  {label:"Comercial",items:[["commercial","Contrato e licenças","wallet"],["credits","Créditos e extrato","coins"],["billing","Faturas e pagamentos","receipt"]]},
  {label:"Conta",items:[["notifications","Notificações","bell"],["access","Histórico de login","history"],["account","Minha conta","account"]]},
 ];
@@ -22,6 +23,7 @@ const SCREEN_SUBTITLES={
  licenses:"Acompanhe licenças e ativações do seu contrato.",
  codes:"Organize os códigos de parceria e seus servidores.",
  web:"Gerencie o acesso ao Player Web dos seus clientes.",
+ "white-label":"Controle seus aplicativos white-label, servidores e ativações.",
  servers:"Configure e acompanhe seus servidores de conteúdo.",
  monitor:"Disponibilidade e latência dos servidores, em tempo real.",
  downloads:"Consulte os aplicativos e links disponibilizados.",
@@ -135,6 +137,7 @@ function PartnerPortalApp(){
  {screen==="customers"&&<Customers/>}
  {screen==="licenses"&&<LicensesAndActivations/>}
  {screen==="web"&&<WebPlayer/>}
+ {screen==="white-label"&&<WhiteLabelApps/>}
  {screen==="credits"&&<CreditsLedger/>}
  {screen==="notifications"&&<Messages onUnread={setUnread}/>}
  {screen==="access"&&<AccessHistory/>}
