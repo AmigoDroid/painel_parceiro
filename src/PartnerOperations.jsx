@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { api, logout } from "./api.js";
 import { toCents, moneyInput } from "./money.js";
 import { CommercialOverview, fmt } from "./Commercial.jsx";
+import ProfilePage from "./ProfilePage.jsx";
 const BASE = "/content-partner";
 const money = n => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format((Number(n) || 0) / 100);
 const date = v => v ? new Date(v).toLocaleString("pt-BR") : "—";
@@ -118,12 +119,15 @@ export function WebPlayer(){
 }
 
 export function PartnerAccount() {
- const [data,setData]=useState(null),[error,setError]=useState(""),[busy,setBusy]=useState(false),[pwd,setPwd]=useState({currentPassword:"",newPassword:""});
+ const [data,setData]=useState(null),[error,setError]=useState(""),[notice,setNotice]=useState(""),[busy,setBusy]=useState(false);
  useEffect(()=>{let active=true;api(BASE+"/account").then(x=>active&&setData(x)).catch(e=>active&&setError(e.message));return()=>{active=false}},[]);
- const save=async e=>{e.preventDefault();setBusy(true);setError("");try{await api(BASE+"/account",{method:"PATCH",body:{contactName:data.contactName,contactPhone:data.contactPhone}})}catch(e){setError(e.message)}finally{setBusy(false)}};
- const changePassword=async e=>{e.preventDefault();setBusy(true);setError("");try{await api("/auth/change-password",{method:"POST",body:pwd});await logout();alert("Senha alterada. Entre novamente com a nova senha.");location.reload()}catch(e){setError(e.message)}finally{setBusy(false)}};
- const [resetInfo,setResetInfo]=useState("");
- const sendReset=async()=>{setBusy(true);setError("");setResetInfo("");try{const r=await api("/auth/password-reset/send-self",{method:"POST"});setResetInfo(r.message)}catch(e){setError(e.message)}finally{setBusy(false)}};
- if(!data)return <p>{error||"Carregando conta…"}</p>;
- return <div className="cards two-cols"><form className="servercard" onSubmit={save}><h2>Dados da parceria</h2><div className="two"><span>Parceria</span><b>{data.name}</b></div><div className="two"><span>Identificador</span><b>{data.slug}</b></div><div className="two"><span>Status</span><b>{status(data.status)}</b></div><label className="label">Nome do contato</label><input maxLength="160" value={data.contactName||""} onChange={e=>setData(v=>({...v,contactName:e.target.value}))}/><label className="label">Telefone</label><input maxLength="40" value={data.contactPhone||""} onChange={e=>setData(v=>({...v,contactPhone:e.target.value}))}/><button className="primary wide" disabled={busy}>Salvar contato</button></form><form className="servercard" onSubmit={changePassword}><h2>Segurança da conta</h2><label className="label">Senha atual</label><input type="password" autoComplete="current-password" value={pwd.currentPassword} onChange={e=>setPwd(v=>({...v,currentPassword:e.target.value}))} required/><label className="label">Nova senha (mínimo 12 caracteres)</label><input type="password" autoComplete="new-password" minLength={12} maxLength={128} value={pwd.newPassword} onChange={e=>setPwd(v=>({...v,newPassword:e.target.value}))} required/><button className="primary wide" disabled={busy}>Alterar senha</button><Notice>Ao alterar a senha, suas sessões serão encerradas.</Notice><div style={{marginTop:20,borderTop:"1px solid #47516a",paddingTop:16}}><h3>Redefinir por e-mail</h3><p>Enviamos um link temporário para o e-mail da sua conta. Não é necessário informar a senha atual.</p><button type="button" className="outline wide" disabled={busy} onClick={sendReset}>Enviar link de redefinição para meu e-mail</button>{resetInfo&&<Notice>{resetInfo}</Notice>}</div><ErrorView message={error}/></form></div>;
+ const save=async e=>{e.preventDefault();setBusy(true);setError("");setNotice("");try{await api(BASE+"/account",{method:"PATCH",body:{contactName:data.contactName,contactPhone:data.contactPhone}});setNotice("Contato comercial atualizado.");}catch(e){setError(e.message)}finally{setBusy(false)}};
+ return <div className="profile-root"><ProfilePage variant="parceiro" />
+ <section className="profile-card profile-narrow"><form onSubmit={save}><h3>Contato comercial da parceria</h3><p className="profile-hint">Esses campos pertencem à parceria, não à sua conta pessoal.</p>
+ {data ? <><div className="profile-info"><span>Parceria</span><b>{data.name}</b><span>Identificador</span><b>{data.slug}</b><span>Status</span><b>{status(data.status)}</b></div>
+ <label className="label" htmlFor="commercial-contact">Nome do contato</label><input id="commercial-contact" maxLength={160} value={data.contactName||""} onChange={e=>setData(v=>({...v,contactName:e.target.value}))}/>
+ <label className="label" htmlFor="commercial-phone">Telefone comercial</label><input id="commercial-phone" maxLength={40} value={data.contactPhone||""} onChange={e=>setData(v=>({...v,contactPhone:e.target.value}))}/>
+ <button className="profile-button primary" disabled={busy}>{busy?"Salvando…":"Salvar contato comercial"}</button></> : <p>{error||"Carregando contato comercial…"}</p>}
+ {notice&&<p className="profile-feedback profile-success" role="status">{notice}</p>}<ErrorView message={error}/></form></section>
+ </div>;
 }
