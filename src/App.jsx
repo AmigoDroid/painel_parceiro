@@ -5,6 +5,8 @@ import { Customers, LicensesAndActivations, Messages, AccessHistory, BillingHist
 import { connectRealtime } from "./realtime.js";
 import Icon from "./Icon.jsx";
 import InviteRegistration from "./InviteRegistration.jsx";
+import { ForgotPassword } from "./PasswordReset.jsx";
+import "./password-reset.css";
 import { consumeInviteRequest } from "./invite-link.js";
 const NAV_GROUPS=[
  {label:"Visão geral",items:[["overview","Início","dashboard"]]},
@@ -44,6 +46,7 @@ function PartnerPortalApp(){
  const [data,setData]=useState({providers:[],codes:[],monitorEnabled:false}),[loading,setLoading]=useState(false),[error,setError]=useState("");
  const [saving,setSaving]=useState(false),[form,setForm]=useState(null),[codeForm,setCodeForm]=useState(null),[search,setSearch]=useState("");
  const [credentials,setCredentials]=useState({email:"",password:""});
+ const [forgotMode,setForgotMode]=useState(false);
  const [poolForm,setPoolForm]=useState(null),[editCode,setEditCode]=useState(null);
  const [allocation,setAllocation]=useState(null);
  const [mobileMenu,setMobileMenu]=useState(false),[unread,setUnread]=useState(0),[profileMenu,setProfileMenu]=useState(false);
@@ -104,7 +107,8 @@ function PartnerPortalApp(){
   }catch(e){setError(e.message)}finally{setSaving(false)}};
  const revoke=async c=>{if(!window.confirm(`Revogar o código ${c.code}? Dispositivos já ativados permanecem ativos.`))return;try{await api(`${BASE}/codes/${c.id}/revoke`,{method:"POST"});reloadCodeList()}catch(e){setError(e.message)}};
  const visibleCodes=codes.rows;
- if(!user)return <main className="loginwrap"><form className="login" onSubmit={signIn}><div className="brandico brandico-login">D</div><h1>Delta TV <span>Parceiros</span></h1><p>Servidores, parcerias e disponibilidade em um só lugar.</p><Label>E-mail</Label><input type="email" required autoComplete="username" value={credentials.email} onChange={e=>setCredentials({...credentials,email:e.target.value})} placeholder="seu@email.com"/><Label>Senha</Label><input type="password" required autoComplete="current-password" value={credentials.password} onChange={e=>setCredentials({...credentials,password:e.target.value})} placeholder="••••••••"/>{error&&<div className="alert">{error}</div>}<button disabled={loading} className="primary wide">{loading?"Entrando…":"Entrar no painel"}</button><small>Uso exclusivo dos parceiros de conteúdo Delta TV.</small></form></main>;
+ if(!user && forgotMode)return <ForgotPassword initialEmail={credentials.email} onBack={()=>{setForgotMode(false);setError("")}}/>;
+ if(!user)return <main className="loginwrap"><form className="login" onSubmit={signIn}><div className="brandico brandico-login">D</div><h1>Delta TV <span>Parceiros</span></h1><p>Servidores, parcerias e disponibilidade em um só lugar.</p><Label>E-mail</Label><input type="email" required autoComplete="username" value={credentials.email} onChange={e=>setCredentials({...credentials,email:e.target.value})} placeholder="seu@email.com"/><Label>Senha</Label><input type="password" required autoComplete="current-password" value={credentials.password} onChange={e=>setCredentials({...credentials,password:e.target.value})} placeholder="••••••••"/>{error&&<div className="alert">{error}</div>}<button disabled={loading} className="primary wide">{loading?"Entrando…":"Entrar no painel"}</button><button type="button" className="reset-login-link" onClick={()=>{setForgotMode(true);setError("")}}>Esqueceu a senha?</button><small>Uso exclusivo dos parceiros de conteúdo Delta TV.</small></form></main>;
  return <div className="shell">
  {mobileMenu&&<button className="partner-scrim" aria-label="Fechar navegação" onClick={()=>setMobileMenu(false)}/>}
  <aside className={`aside ${mobileMenu?"mobile-open":""}`}>

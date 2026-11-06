@@ -122,3 +122,7 @@ export const registerReseller = (body) => raw("/auth/register-reseller", { metho
 // Convites de parceria: rotas públicas, segredo sempre no corpo POST.
 export const verifyPartnerInvite = (token) => raw("/auth/partner-invite/verify", { method: "POST", body: { token } });
 export const completePartnerInvite = (body) => raw("/auth/partner-invite/complete", { method: "POST", body });
+
+// Públicos: são chamados sem sessão para não expor um access token num link de e-mail.
+export const requestPasswordReset = (email) => raw("/auth/password-reset/request", { method: "POST", body: { email } });
+export const completePasswordReset = (token, newPassword) => raw("/auth/password-reset/complete", { method: "POST", body: { token, newPassword } });

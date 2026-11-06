@@ -39,16 +39,22 @@
 <body>
   <div id="root"></div>
   <script type="module">
-    const isInvite = !!window.__DELTA_PARTNER_INVITE_REQUEST__;
+    const isReset = /^\/redefinir-senha\/?$/.test(window.location.pathname);
+    if (isReset) {
+      const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+      window.__DELTA_PASSWORD_RESET_TOKEN__ = hash.get("token") || "";
+      window.history.replaceState(window.history.state, "", "/redefinir-senha");
+    }
+    const isInvite = !isReset && !!window.__DELTA_PARTNER_INVITE_REQUEST__;
     if (isInvite) {
       document.getElementById("root").innerHTML = '<main style="min-height:100vh;display:grid;place-items:center;background:#090d17;color:#fff;font:16px system-ui,sans-serif;padding:24px"><p>Carregando página de convite...</p></main>';
     }
     // Imports independentes: uma falha em um modulo do painel privado nao
     // bloqueia a pagina publica de cadastro.
     // Sem top-level await: compativel com o target padrao do Vite (ES2020).
-    const entry = isInvite
-      ? import("./src/invite-entry.jsx")
-      : import("./src/main.jsx");
+    const entry = isReset
+      ? import("./src/reset-entry.jsx")
+      : isInvite ? import("./src/invite-entry.jsx") : import("./src/main.jsx");
     entry.catch((error) => {
       console.error("[delta-partner] Falha ao carregar o frontend", error);
       const root = document.getElementById("root");
