@@ -5,6 +5,7 @@ import { Customers, LicensesAndActivations, Messages, AccessHistory, BillingHist
 import { connectRealtime } from "./realtime.js";
 import Icon from "./Icon.jsx";
 import WhiteLabelApps from "./WhiteLabelApps.jsx";
+import AppearanceStudio from "./AppearanceStudio.jsx";
 import InviteRegistration from "./InviteRegistration.jsx";
 import { ForgotPassword } from "./PasswordReset.jsx";
 import "./password-reset.css";
@@ -12,7 +13,7 @@ import { consumeInviteRequest } from "./invite-link.js";
 const NAV_GROUPS=[
  {label:"Visão geral",items:[["overview","Início","dashboard"]]},
  {label:"Atendimento",items:[["customers","Clientes","users"],["devices","Dispositivos","monitor"],["licenses","Licenças","shield"]]},
- {label:"Ativação e conteúdo",items:[["codes","Códigos de parceria","key"],["white-label","Meus aplicativos","download"],["web","Player Web","globe"],["servers","Servidores","server"],["monitor","Monitoramento","activity"],["downloads","Downloads e links","download"]]},
+ {label:"Ativação e conteúdo",items:[["codes","Códigos de parceria","key"],["white-label","Meus aplicativos","download"],["studio","Estúdio Visual","monitor"],["web","Player Web","globe"],["servers","Servidores","server"],["monitor","Monitoramento","activity"],["downloads","Downloads e links","download"]]},
  {label:"Comercial",items:[["commercial","Contrato e licenças","wallet"],["credits","Créditos e extrato","coins"],["billing","Faturas e pagamentos","receipt"]]},
  {label:"Conta",items:[["notifications","Notificações","bell"],["access","Histórico de login","history"],["account","Minha conta","account"]]},
 ];
@@ -24,6 +25,7 @@ const SCREEN_SUBTITLES={
  codes:"Organize os códigos de parceria e seus servidores.",
  web:"Gerencie o acesso ao Player Web dos seus clientes.",
  "white-label":"Controle seus aplicativos white-label, servidores e ativações.",
+ studio:"Personalize o visual e publique novos temas para seus aplicativos Roku.",
  servers:"Configure e acompanhe seus servidores de conteúdo.",
  monitor:"Disponibilidade e latência dos servidores, em tempo real.",
  downloads:"Consulte os aplicativos e links disponibilizados.",
@@ -45,6 +47,12 @@ const healthNames={healthy:"Saudável",slow:"Lento",down:"Indisponível",suspect
 function State({health}) { const state=health?.state||"unknown";return <span className={`pill ${state}`}>{healthNames[state]||state}</span> }
 function PartnerPortalApp(){
  const [user,setUser]=useState(getAuth()?.user||null),[screen,setScreen]=useState("overview");
+ const [studioApps,setStudioApps]=useState([]);
+ useEffect(()=>{if(!user){setStudioApps([]);return;} let active=true;
+  const fetchStudio=()=>api('/partner/white-label/appearance/eligible').then(r=>{if(active)setStudioApps(r.data||[])}).catch(()=>{if(active)setStudioApps([])});
+  void fetchStudio();const timer=setInterval(fetchStudio,60000);
+  return()=>{active=false;clearInterval(timer)};
+ },[user?.id]);
  const [data,setData]=useState({providers:[],codes:[],monitorEnabled:false}),[loading,setLoading]=useState(false),[error,setError]=useState("");
  const [saving,setSaving]=useState(false),[form,setForm]=useState(null),[codeForm,setCodeForm]=useState(null),[search,setSearch]=useState("");
  const [credentials,setCredentials]=useState({email:"",password:""});
@@ -124,7 +132,7 @@ function PartnerPortalApp(){
  {mobileMenu&&<button className="partner-scrim" aria-label="Fechar navegação" onClick={()=>setMobileMenu(false)}/>}
  <aside className={`aside ${mobileMenu?"mobile-open":""}`}>
   <div className="logo"><div className="brandico">D</div><div className="brandcopy">Delta TV<small>PORTAL DO PARCEIRO</small></div><button type="button" className="close mobile-close" aria-label="Fechar menu" onClick={()=>setMobileMenu(false)}><Icon name="x" size={20}/></button></div>
-  <nav className="nav" aria-label="Navegação do parceiro">{NAV_GROUPS.map(group=><div key={group.label} className="partner-nav-group"><span className="partner-nav-label">{group.label}</span>{group.items.map(([id,name,ico])=><button type="button" className={screen===id?"active":""} aria-current={screen===id?"page":undefined} key={id} onClick={()=>navigate(id)}><span className="nav-icon"><Icon name={ico} size={19}/></span><span className="nav-text">{name}</span>{id==="notifications"&&showBadge&&unread>0&&<b className="nav-count">{unread}</b>}{screen===id&&<Icon name="chevronRight" size={14} className="nav-chevron"/>}</button>)}</div>)}</nav>
+  <nav className="nav" aria-label="Navegação do parceiro">{NAV_GROUPS.map(group=><div key={group.label} className="partner-nav-group"><span className="partner-nav-label">{group.label}</span>{group.items.filter(([id])=>id!=="studio"||studioApps.length>0).map(([id,name,ico])=><button type="button" className={screen===id?"active":""} aria-current={screen===id?"page":undefined} key={id} onClick={()=>navigate(id)}><span className="nav-icon"><Icon name={ico} size={19}/></span><span className="nav-text">{name}</span>{id==="notifications"&&showBadge&&unread>0&&<b className="nav-count">{unread}</b>}{screen===id&&<Icon name="chevronRight" size={14} className="nav-chevron"/>}</button>)}</div>)}</nav>
   <div className="sidefoot"><span className={`side-status-dot ${data.monitorEnabled?"is-on":""}`}/><div><span>Monitoramento</span><b>{data.monitorEnabled?"Ativado":"Desativado"}</b></div></div>
  </aside>
  <section className="main"><header className="app-header"><div className="header-left"><button type="button" className="partner-menu" aria-label="Abrir menu" onClick={()=>setMobileMenu(true)}><Icon name="menu" size={21}/></button><div className="page-heading"><div className="eyebrow"><span className="eyebrow-dot"/>{data.servicePlan?.features?.label||"PARCEIRO DE CONTEÚDO"}</div><h1>{SCREEN_TITLES[screen]||"Painel do parceiro"}</h1><p className="page-subtitle">{SCREEN_SUBTITLES[screen]||"Gerencie sua parceria"}</p></div></div><div className="topright"><button type="button" className="header-refresh" onClick={refresh} title="Atualizar informações"><Icon name="refresh" size={18}/><span>Atualizar</span></button><button type="button" className="header-notifications" aria-label={`Notificações${unread?` (${unread} não lidas)`:""}`} onClick={()=>navigate("notifications")}><Icon name="bell" size={19}/>{showBadge&&unread>0&&<span className="notif-dot"/>}</button><div className="profile-wrap"><button type="button" className="profile-trigger" aria-haspopup="menu" aria-expanded={profileMenu} onClick={()=>setProfileMenu(v=>!v)}><span className="avatar">{profileDetails?.profile?.avatarData?<img src={profileDetails.profile.avatarData} className="profile-menu-avatar" alt=""/>:(user.name||user.email||"P")[0].toUpperCase()}</span><span className="profile-identity"><b>{user.name||"Parceiro"}</b><small>Minha conta</small></span><Icon name="chevron" size={16}/></button>{profileMenu&&<><button type="button" className="profile-dismiss" aria-label="Fechar menu da conta" onClick={()=>setProfileMenu(false)}/><div className="profile-popover" role="menu"><div className="profile-popover-title"><b>{user.name||"Parceiro"}</b><span>{user.email||"Conta de parceiro"}</span></div><button role="menuitem" onClick={()=>navigate("account")}><Icon name="account" size={17}/> Meu perfil</button><button role="menuitem" className="logout-item" onClick={signOut}><Icon name="logout" size={17}/> Sair da conta</button></div></>}</div></div></header>
@@ -138,6 +146,7 @@ function PartnerPortalApp(){
  {screen==="licenses"&&<LicensesAndActivations/>}
  {screen==="web"&&<WebPlayer/>}
  {screen==="white-label"&&<WhiteLabelApps/>}
+ {screen==="studio"&&studioApps.length>0&&<AppearanceStudio apps={studioApps}/>}
  {screen==="credits"&&<CreditsLedger/>}
  {screen==="notifications"&&<Messages onUnread={setUnread}/>}
  {screen==="access"&&<AccessHistory/>}
