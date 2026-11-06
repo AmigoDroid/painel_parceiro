@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { api } from './api.js';
+import { api, downloadRokuZip, uploadRokuImage } from './api.js';
 import './appearance-studio.css';
 
 const ROOT = '/partner/white-label';
@@ -9,6 +9,9 @@ const PRESETS = [
   { id: 'compact', title: 'Compacto', description: 'Categorias e conteúdo em primeiro plano.', colors: ['#25B6A6','#081519','#10252B','#F5FCFC'] },
 ];
 const KEYS = ['primaryColor','backgroundColor','panelColor','textColor'];
+const ROKU_ASSETS=[['logo','Logotipo (180×180 ou 400×400)'],['icon_hd','Ícone HD (336×210)'],
+ ['icon_sd','Ícone SD (246×140)'],['splash_hd','Splash HD (1280×720)'],['splash_fhd','Splash Full HD (1920×1080)'],
+ ['banner','Banner na Home (1020×314)']];
 const palette = (previous, preset) => Object.fromEntries(KEYS.map((key, i) => [key, preset.colors[i]]));
 const empty = { template:'classic', brandName:'Meu aplicativo', tagline:'Seu entretenimento em um só lugar.',
   heroTitle:'Bem-vindo', logoUrl:'', heroUrl:'', primaryColor:'#6B47E6', backgroundColor:'#090B14', panelColor:'#101321', textColor:'#FFFFFF' };
@@ -44,6 +47,8 @@ export default function AppearanceStudio({ apps: initialApps = [] }) {
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [rokuAssets,setRokuAssets]=useState({});
+  const [rokuBuildVersion,setRokuBuildVersion]=useState(1);
   const load = useCallback(async () => {
     try {
       const r = await api(`${ROOT}/appearance/eligible`);
@@ -63,6 +68,32 @@ export default function AppearanceStudio({ apps: initialApps = [] }) {
   }, [appId]);
   const selected = useMemo(() => apps.find(a => a.id === appId), [apps, appId]);
   const set = (key, value) => { setDraft(d => ({ ...d, [key]: value })); setDirty(true); setNotice(''); };
+  useEffect(()=>{
+    if(!appId) return;
+    let active=true;
+    api(`${ROOT}/${appId}/roku-assets`).then(d=>{if(active)setRokuAssets(d.assets||{});}).catch(()=>{});
+    return ()=>{active=false;};
+  },[appId]);
+  const uploadRokuAsset = async (kind, file) => {
+    if(!file) return;
+    setBusy(true);setError('');setNotice('');
+    try{
+      await uploadRokuImage(`${ROOT}/${appId}/roku-assets/${kind}`,file);
+      const d=await api(`${ROOT}/${appId}/roku-assets`);
+      setRokuAssets(d.assets||{});
+      setNotice('Imagem salva. Ela será incluída nos próximos pacotes Premium.');
+    }catch(e){setError(e.message);}finally{setBusy(false);}
+  };
+  const exportRoku = async edition => {
+    if (dirty && !window.confirm('Seu rascunho foi alterado. O pacote utilizará o último visual publicado. Continuar?')) return;
+    setBusy(true);setError('');setNotice('');
+    try {
+      const currentApp=apps.find(a=>a.id===appId);
+      await downloadRokuZip(`${ROOT}/${appId}/roku-export?edition=${edition}&buildVersion=${rokuBuildVersion}`,
+        `roku-${currentApp?.appKey||'aplicativo'}-${edition}.zip`);
+      setNotice('ZIP preparado. O responsável precisa instalar na TV Roku, assinar o .pkg e enviar à loja.');
+    } catch(e){setError(e.message);}finally{setBusy(false);}
+  };
   const chooseTemplate = preset => { setDraft(d => ({ ...d, template: preset.id, ...palette(d, preset) })); setDirty(true); setNotice(''); };
   const save = async () => {
     setBusy(true); setError(''); setNotice('');
@@ -115,6 +146,25 @@ export default function AppearanceStudio({ apps: initialApps = [] }) {
           {published && <small>O visual publicado é independente deste rascunho até você clicar em Publicar.</small>}
         </section>
       </div>
+      <section className="panel ap-export-studio">
+        <h3>Gerar aplicativo Roku</h3><p>Após configurar e publicar o visual, escolha a modalidade de entrega. O Superadmin controla a liberação.</p>
+        <div className="ap-brand-assets">
+          <h4>Arquivos de identidade para a loja e a TV</h4>
+          <p>Opcional: envie imagens PNG nos tamanhos abaixo. Se faltar alguma, o sistema cria um modelo básico com a marca; para publicação profissional, envie sua arte.</p>
+          <div className="ap-assets-grid">{ROKU_ASSETS.map(([key,label])=><label key={key}>{label}
+            <small>{rokuAssets[key]?.present?'Imagem cadastrada':'Automático / não cadastrado'}</small>
+            <input aria-label={label} disabled={busy} type="file" accept="image/png" onChange={e=>{void uploadRokuAsset(key,e.target.files?.[0]);e.target.value='';}}/>
+          </label>)}</div>
+        </div>
+        <label className="ap-build-version">Número da build (aumente nas atualizações) <input type="number" min="1" max="99999" value={rokuBuildVersion} onChange={e=>setRokuBuildVersion(e.target.valueAsNumber||1)}/></label>
+        <div className="ap-export-options">
+          <div><h4>Econômico — visual dinâmico</h4><p>Canal com identidade básica e atualizações de aparência pelo painel, sem recompilar a cada mudança de cor.</p>
+            <button type="button" disabled={busy} className="outline" onClick={()=>exportRoku('economy')}>Baixar ZIP Econômico</button></div>
+          <div><h4>Premium — aplicativo próprio</h4><p>Nome, ícones e splash individualizados, tema publicado incluído no pacote e configuração de login Xtream do cliente.</p>
+            <button type="button" disabled={busy||!version||dirty} className="primary" onClick={()=>exportRoku('dedicated')}>Gerar ZIP Premium</button></div>
+        </div>
+        <small>O ZIP é a fonte para sideload. A assinatura .pkg depende de uma TV Roku configurada com chave de desenvolvedor. O envio e a aprovação na loja não são automáticos.</small>
+      </section>
     </>}
   </div>;
 }
