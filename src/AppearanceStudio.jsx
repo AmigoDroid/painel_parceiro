@@ -1,12 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, downloadRokuZip, uploadRokuImage } from './api.js';
 import './appearance-studio.css';
+import RokuSimulator from './RokuSimulator.jsx';
 
 const ROOT = '/partner/white-label';
 const PRESETS = [
   { id: 'classic', title: 'Clássico', description: 'Banner e cartões, com destaques abaixo.', colors: ['#6B47E6','#090B14','#101321','#FFFFFF'] },
   { id: 'cinema', title: 'Cinema', description: 'Banner imersivo, dando destaque à capa.', colors: ['#E7A94B','#090B10','#17191F','#FFFFFF'] },
   { id: 'compact', title: 'Compacto', description: 'Categorias e conteúdo em primeiro plano.', colors: ['#25B6A6','#081519','#10252B','#F5FCFC'] },
+  { id: 'minimal', title: 'Minimalista', description: 'Menu superior, tipografia limpa e navegação sem banner.', colors: ['#D4A45C','#11161B','#1B2229','#F7F5EE'] },
+  { id: 'mosaic', title: 'Mosaico', description: 'Blocos grandes e coloridos com categorias em evidência.', colors: ['#EC734F','#151316','#29232A','#FFF6F0'] },
+  { id: 'library', title: 'Biblioteca', description: 'Catálogo primeiro: pôsteres e navegação discreta.', colors: ['#93CBAA','#0D1615','#1A2B26','#F3FBF6'] },
 ];
 const KEYS = ['primaryColor','backgroundColor','panelColor','textColor'];
 const ROKU_ASSETS=[['logo','Logotipo (180×180 ou 400×400)'],['icon_hd','Ícone HD (336×210)'],
@@ -21,22 +25,6 @@ const contrast = (a,b) => {
     .reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);
   const x=L(a),y=L(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);
 };
-function TvPreview({ config }) {
-  const style = {
-    '--ap-accent': config.primaryColor, '--ap-bg': config.backgroundColor,
-    '--ap-panel': config.panelColor, '--ap-fg': config.textColor,
-  };
-  return <div className={`ap-tv ap-tv-${config.template}`} style={style} role="img" aria-label={`Prévia da interface ${config.template}`}>
-    <aside className="ap-tv-side"><div className="ap-tv-brand">{config.logoUrl && looksLikeImage(config.logoUrl) ? <img src={config.logoUrl} alt="" /> : <span className="ap-tv-mark">{config.brandName.slice(0,1).toUpperCase()}</span>}
-      <b>{config.brandName}</b></div><span className="ap-tv-active">Início</span><span>TV ao vivo</span><span>Filmes</span><span>Séries</span><span>Favoritos</span></aside>
-    <main className="ap-tv-main">
-      {config.template !== 'compact' && <section className="ap-tv-hero" style={config.heroUrl && looksLikeImage(config.heroUrl) ? { backgroundImage: `linear-gradient(90deg,${config.backgroundColor} 0%,transparent 100%),url("${config.heroUrl.replace(/"/g,'')}")` } : {}}>
-        <small>{config.brandName}</small><h3>{config.heroTitle}</h3><p>{config.tagline}</p></section>}
-      <div className="ap-tv-cards"><div>TV AO VIVO</div><div>FILMES</div><div>SÉRIES</div></div>
-      {config.template !== 'cinema' && <section className="ap-tv-feature"><b>Em destaque</b><div className="ap-tv-posters">{[0,1,2,3,4].map(i => <span key={i} />)}</div></section>}
-    </main>
-  </div>;
-}
 export default function AppearanceStudio({ apps: initialApps = [] }) {
   const [apps, setApps] = useState(initialApps);
   const [appId, setAppId] = useState(initialApps[0]?.id || '');
@@ -126,7 +114,7 @@ export default function AppearanceStudio({ apps: initialApps = [] }) {
     {selected && <>
       <section className="panel"><div className="ap-header"><div><h3>Modelos prontos</h3><p>Um clique carrega o modelo. Depois, personalize cores e conteúdo.</p></div><span>Versão publicada: {version || 'nenhuma'}</span></div>
         <div className="ap-presets">{PRESETS.map(p => <button type="button" key={p.id} aria-pressed={draft.template === p.id} className={`ap-preset ${draft.template === p.id ? 'selected' : ''}`} onClick={() => chooseTemplate(p)}>
-          <div className="ap-swatch" style={{ background:p.colors[1] }}><i style={{background:p.colors[0]}}/><em style={{background:p.colors[2]}}/><span style={{color:p.colors[3]}}>TV</span></div><b>{p.title}</b><small>{p.description}</small></button>)}</div></section>
+          <div className={`ap-swatch ap-swatch-${p.id}`} style={{ background:p.colors[1] }}><i style={{background:p.colors[0]}}/><em style={{background:p.colors[2]}}/><span style={{color:p.colors[3]}}>TV</span></div><b>{p.title}</b><small>{p.description}</small></button>)}</div></section>
       <div className="ap-editor-layout">
         <section className="panel ap-controls"><h3>Personalização</h3>
           <label>Nome mostrado no aplicativo<input maxLength={45} value={draft.brandName} onChange={e=>set('brandName',e.target.value)} /></label>
@@ -141,8 +129,8 @@ export default function AppearanceStudio({ apps: initialApps = [] }) {
           <div className="ap-buttons"><button type="button" disabled={busy || !dirty} className="outline" onClick={save}>Salvar rascunho</button>
             <button type="button" disabled={busy || !draft.brandName.trim() || !draft.heroTitle.trim()} className="primary" onClick={publish}>{busy?'Publicando…':'Publicar no aplicativo'}</button></div>
         </section>
-        <section className="panel ap-preview"><div className="ap-header"><h3>Prévia da TV</h3><span>Simulação 16:9</span></div><TvPreview config={draft}/>
-          <p>Prévia aproximada do layout. A renderização real precisa ser testada em um aparelho Roku.</p>
+        <section className="panel ap-preview"><div className="ap-header"><h3>Simulador navegável</h3><span>Login · Home · TV · Filmes · Séries</span></div><RokuSimulator config={draft}/>
+          <p>Prévia interativa com dados fictícios, navegação por controle virtual e teclado. Não executa BrightScript nem reproduz conteúdo real. Teste o pacote final em uma Roku antes de publicar.</p>
           {published && <small>O visual publicado é independente deste rascunho até você clicar em Publicar.</small>}
         </section>
       </div>
