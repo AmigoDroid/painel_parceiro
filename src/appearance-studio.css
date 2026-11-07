@@ -16,3 +16,10 @@
 .ap-swatch-minimal{display:grid;align-content:center;gap:10px}.ap-swatch-minimal i{height:4px!important;width:66%!important}.ap-swatch-minimal em{height:15px!important;max-width:90%;width:90%;border-radius:2px}.ap-swatch-minimal span{bottom:5px;right:6px;font-size:10px;letter-spacing:.1em}
 .ap-swatch-mosaic{align-items:stretch}.ap-swatch-mosaic i{width:50%!important;height:auto!important;border-radius:2px}.ap-swatch-mosaic em{height:auto!important;border-radius:2px}.ap-swatch-mosaic span{bottom:5px;right:6px;background:#0008;padding:3px 7px;border-radius:3px}
 .ap-swatch-library{align-items:end}.ap-swatch-library i{width:24%!important;height:74%!important;border-radius:2px}.ap-swatch-library em{flex:1;height:74%!important;border-radius:2px}.ap-swatch-library span{bottom:54px;right:13px;letter-spacing:.06em;font-size:11px}
+/* Etapa 14: application selector remains compact. Screen editor is the workspace. */
+.ap-studio.ap-studio-compact{max-width:none;display:grid;gap:12px}
+.ap-studio-compact .ap-app-selector{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 14px;border:1px solid var(--line,#343b49);border-radius:12px;background:var(--card,#171c27)}
+.ap-app-selector h2{margin:0;font-size:18px}.ap-app-selector small{color:var(--muted,#a5acb7)}
+.ap-app-selector label{display:flex;align-items:center;gap:10px;font-size:12px}.ap-app-selector select{max-width:400px;min-width:225px}
+.ap-studio-compact .ap-export-studio{border:0;box-shadow:none;padding:0;background:transparent}
+@media(max-width:600px){.ap-app-selector label,.ap-app-selector select{width:100%;max-width:none}}

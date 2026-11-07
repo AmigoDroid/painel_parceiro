@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, downloadRokuZip, uploadRokuImage } from './api.js';
 import './appearance-studio.css';
-import RokuSimulator from './RokuSimulator.jsx';
+import StudioWorkspace from './StudioWorkspace.jsx';
+import { normalizeAppearance, updateAppearanceScreen, SCREEN_DEFAULTS } from './appearance-screen-settings.js';
 
 const ROOT = '/partner/white-label';
 const PRESETS = [
@@ -17,7 +18,7 @@ const ROKU_ASSETS=[['logo','Logotipo (180×180 ou 400×400)'],['icon_hd','Ícone
  ['icon_sd','Ícone SD (246×140)'],['splash_hd','Splash HD (1280×720)'],['splash_fhd','Splash Full HD (1920×1080)'],
  ['banner','Banner na Home (1020×314)']];
 const palette = (previous, preset) => Object.fromEntries(KEYS.map((key, i) => [key, preset.colors[i]]));
-const empty = { template:'classic', brandName:'Meu aplicativo', tagline:'Seu entretenimento em um só lugar.',
+const empty = { screens:SCREEN_DEFAULTS, template:'classic', brandName:'Meu aplicativo', tagline:'Seu entretenimento em um só lugar.',
   heroTitle:'Bem-vindo', logoUrl:'', heroUrl:'', primaryColor:'#6B47E6', backgroundColor:'#090B14', panelColor:'#101321', textColor:'#FFFFFF' };
 const looksLikeImage = url => !url || /^https:\/\//i.test(url);
 const contrast = (a,b) => {
@@ -50,7 +51,7 @@ export default function AppearanceStudio({ apps: initialApps = [] }) {
     let active = true;
     setError(''); setNotice('');
     api(`${ROOT}/${appId}/appearance`).then(r => { if (!active) return;
-      setDraft(r.draft || empty); setPublished(r.published); setVersion(r.version || 0); setDirty(false);
+      setDraft(normalizeAppearance(r.draft || empty)); setPublished(r.published); setVersion(r.version || 0); setDirty(false);
     }).catch(e => { if (active) setError(e.message); });
     return () => { active = false; };
   }, [appId]);
@@ -82,7 +83,15 @@ export default function AppearanceStudio({ apps: initialApps = [] }) {
       setNotice('ZIP preparado. O responsável precisa instalar na TV Roku, assinar o .pkg e enviar à loja.');
     } catch(e){setError(e.message);}finally{setBusy(false);}
   };
-  const chooseTemplate = preset => { setDraft(d => ({ ...d, template: preset.id, ...palette(d, preset) })); setDirty(true); setNotice(''); };
+  const chooseTemplate = id => { const preset = PRESETS.find(p=>p.id===id); if (!preset) return;
+    setDraft(d => ({ ...d, template:id, ...palette(d,preset) })); setDirty(true); setNotice(''); };
+  const setScreenField = (screen, key, value) => {setDraft(d => {
+    const next = updateAppearanceScreen(d,screen,key,value);
+    // Keep older Roku versions that read the original Home copy compatible.
+    if(screen==='home' && key==='heading') next.heroTitle=value;
+    if(screen==='home' && key==='subtitle') next.tagline=value;
+    return next;
+  });setDirty(true);setNotice('');};
   const save = async () => {
     setBusy(true); setError(''); setNotice('');
     try { if (!looksLikeImage(draft.logoUrl) || !looksLikeImage(draft.heroUrl)) throw Error('As imagens devem usar HTTPS.');
@@ -105,35 +114,18 @@ export default function AppearanceStudio({ apps: initialApps = [] }) {
     } catch (e) { setError(e.message); }
     finally { setBusy(false); }
   };
-  return <div className="ap-studio">
-    <section className="panel ap-intro"><h2>Estúdio Visual</h2><p>Escolha um modelo pronto ou personalize seu aplicativo Roku. O Superadmin controla quais aplicativos podem acessar este recurso.</p>
-      {apps.length > 0 && <label>Aplicativo<select value={appId} onChange={e => setAppId(e.target.value)}>{apps.map(a => <option key={a.id} value={a.id}>{a.name} · {a.appKey}</option>)}</select></label>}
-      {!apps.length && <p className="ap-alert">Nenhum aplicativo com personalização liberada. Solicite a habilitação ao Superadmin.</p>}
-    </section>
-    {error && <p className="ap-alert" role="alert">{error}</p>}{notice && <p className="ap-success" role="status">{notice}</p>}
-    {selected && <>
-      <section className="panel"><div className="ap-header"><div><h3>Modelos prontos</h3><p>Um clique carrega o modelo. Depois, personalize cores e conteúdo.</p></div><span>Versão publicada: {version || 'nenhuma'}</span></div>
-        <div className="ap-presets">{PRESETS.map(p => <button type="button" key={p.id} aria-pressed={draft.template === p.id} className={`ap-preset ${draft.template === p.id ? 'selected' : ''}`} onClick={() => chooseTemplate(p)}>
-          <div className={`ap-swatch ap-swatch-${p.id}`} style={{ background:p.colors[1] }}><i style={{background:p.colors[0]}}/><em style={{background:p.colors[2]}}/><span style={{color:p.colors[3]}}>TV</span></div><b>{p.title}</b><small>{p.description}</small></button>)}</div></section>
-      <div className="ap-editor-layout">
-        <section className="panel ap-controls"><h3>Personalização</h3>
-          <label>Nome mostrado no aplicativo<input maxLength={45} value={draft.brandName} onChange={e=>set('brandName',e.target.value)} /></label>
-          <label>Título principal<input maxLength={90} value={draft.heroTitle} onChange={e=>set('heroTitle',e.target.value)} /></label>
-          <label>Mensagem de boas-vindas<input maxLength={110} value={draft.tagline} onChange={e=>set('tagline',e.target.value)} /></label>
-          <label>URL HTTPS do logotipo<input type="url" placeholder="https://exemplo.com/logo.png" value={draft.logoUrl} onChange={e=>set('logoUrl',e.target.value)} /></label>
-          <label>URL HTTPS da imagem de destaque<input type="url" placeholder="https://exemplo.com/capa.jpg" value={draft.heroUrl} onChange={e=>set('heroUrl',e.target.value)} /></label>
-          <div className="ap-colors">{[['primaryColor','Cor de destaque'],['backgroundColor','Fundo'],['panelColor','Menu e cartões'],['textColor','Texto']].map(([key,label]) => <label key={key}>{label}<div><input type="color" value={draft[key]} onChange={e=>set(key,e.target.value)}/><code>{draft[key]}</code></div></label>)}</div>
-          {(contrast(draft.textColor,draft.backgroundColor)<4.5 || contrast(draft.textColor,draft.panelColor)<4.5) &&
-            <p className="ap-alert" role="alert">Baixo contraste: ajuste as cores de texto, fundo e menu para permitir a publicação.</p>}
-          <p className="ap-help">Use imagens públicas otimizadas. Ícone e splash da loja Roku são definidos no pacote do aplicativo.</p>
-          <div className="ap-buttons"><button type="button" disabled={busy || !dirty} className="outline" onClick={save}>Salvar rascunho</button>
-            <button type="button" disabled={busy || !draft.brandName.trim() || !draft.heroTitle.trim()} className="primary" onClick={publish}>{busy?'Publicando…':'Publicar no aplicativo'}</button></div>
-        </section>
-        <section className="panel ap-preview"><div className="ap-header"><h3>Simulador navegável</h3><span>Login · Home · TV · Filmes · Séries</span></div><RokuSimulator config={draft}/>
-          <p>Prévia interativa com dados fictícios, navegação por controle virtual e teclado. Não executa BrightScript nem reproduz conteúdo real. Teste o pacote final em uma Roku antes de publicar.</p>
-          {published && <small>O visual publicado é independente deste rascunho até você clicar em Publicar.</small>}
-        </section>
-      </div>
+  return <div className="ap-studio ap-studio-compact">
+    <div className="ap-app-selector"><div><h2>Estúdio Visual</h2><small>Personalize cada tela e acompanhe o resultado ao vivo.</small></div>
+      {apps.length > 0 && <label>Aplicativo<select aria-label="Aplicativo" value={appId} onChange={e=>{
+        if(dirty && !window.confirm('Existem alterações não salvas. Trocar de aplicativo e descartá-las?'))return;
+        setAppId(e.target.value);
+      }}>{apps.map(a=><option key={a.id} value={a.id}>{a.name} · {a.appKey}</option>)}</select></label>}
+    </div>
+    {!apps.length&&<p className="ap-alert">Nenhum aplicativo com personalização liberada.</p>}
+    {!selected&&error&&<p className="ap-alert" role="alert">{error}</p>}
+    {selected && <StudioWorkspace config={draft} onField={set} onScreenField={setScreenField}
+       onTemplate={chooseTemplate} onSave={save} onPublish={publish} busy={busy} dirty={dirty}
+       version={version} error={error} notice={notice} actionsDisabled={!draft.heroTitle.trim()}>
       <section className="panel ap-export-studio">
         <h3>Gerar aplicativo Roku</h3><p>Após configurar e publicar o visual, escolha a modalidade de entrega. O Superadmin controla a liberação.</p>
         <div className="ap-brand-assets">
@@ -153,6 +145,6 @@ export default function AppearanceStudio({ apps: initialApps = [] }) {
         </div>
         <small>O ZIP é a fonte para sideload. A assinatura .pkg depende de uma TV Roku configurada com chave de desenvolvedor. O envio e a aprovação na loja não são automáticos.</small>
       </section>
-    </>}
+    </StudioWorkspace>}
   </div>;
 }

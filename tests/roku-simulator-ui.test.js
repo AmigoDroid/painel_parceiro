@@ -11,7 +11,7 @@ test('controle virtual tem teclas e simulação pausável, sem IPTV real',()=>{
 });
 test('novas interfaces têm composições distintas e coexistem com editor',()=>{
  for(const key of ['minimal','mosaic','library']) assert.match(css,new RegExp('rs-template-'+key));
- assert.match(studio,/<RokuSimulator config=\{draft\}\/>/);
- assert.match(studio,/Publicar no aplicativo/);
+ assert.match(studio,/<StudioWorkspace config=\{draft\}/);
+ assert.match(readFileSync(new URL('../src/StudioWorkspace.jsx',import.meta.url),'utf8'),/Publicar/);
  assert.match(studio,/Gerar ZIP Premium/);
 });
