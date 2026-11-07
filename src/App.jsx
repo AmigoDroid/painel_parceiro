@@ -71,6 +71,8 @@ function PartnerPortalApp(){
  const [poolForm,setPoolForm]=useState(null),[editCode,setEditCode]=useState(null);
  const [allocation,setAllocation]=useState(null);
  const [mobileMenu,setMobileMenu]=useState(false),[unread,setUnread]=useState(0),[profileMenu,setProfileMenu]=useState(false);
+ // O tutorial de navegação abre o menu móvel para exibir o item real destacado.
+ useEffect(()=>{const openForHelp=()=>setMobileMenu(true);window.addEventListener("deltatv-help-open-menu",openForHelp);return()=>window.removeEventListener("deltatv-help-open-menu",openForHelp)},[]);
  useEffect(()=>connectRealtime(),[]);
  useEffect(()=>{const sync=()=>setUser(getAuth()?.user||null);window.addEventListener("auth-changed",sync);return()=>window.removeEventListener("auth-changed",sync)},[]);
  useEffect(()=>{
