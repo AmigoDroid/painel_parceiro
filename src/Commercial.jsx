@@ -1,3 +1,4 @@
+import ConnectionAudit from "./ConnectionAudit.jsx";
 import React,{useCallback,useEffect,useState} from "react";
 import {api} from "./api.js";
 const BASE="/content-partner";
@@ -24,6 +25,7 @@ export function CommercialOverview(){
   </>}</div>
 }
 export function PartnerDevices(){
+ const [auditId,setAuditId]=useState(null);
  const [q,setQ]=useState(""),[page,setPage]=useState(1),[data,setData]=useState({data:[],meta:{total:0,totalPages:1}}),[error,setError]=useState(""),[busy,setBusy]=useState(null),[tick,setTick]=useState(0);
  useEffect(()=>{let cancelled=false;const timer=setTimeout(()=>{api(BASE+"/devices",{query:{q,page,pageSize:20}}).then(r=>{if(!cancelled){setData(r);setError("")}}).catch(e=>{if(!cancelled)setError(e.message)})},250);return()=>{cancelled=true;clearTimeout(timer)}},[q,page,tick]);
  const unlink=async d=>{
@@ -31,11 +33,12 @@ export function PartnerDevices(){
   const reason=window.prompt("Motivo do desvínculo (obrigatório):", "Cliente saiu da parceria");if(!reason||reason.trim().length<3)return;
   setBusy(d.id);try{await api(`${BASE}/devices/${d.id}/revoke`,{method:"POST",body:{reason}});setTick(n=>n+1)}catch(e){setError(e.message)}finally{setBusy(null)};
  };
- return <section><div className="heading"><p>Consulte as ativações da sua parceria. Use a pesquisa para localizar um dispositivo pelo MAC.</p><input className="search" placeholder="Buscar MAC" value={q} onChange={e=>{setQ(e.target.value);setPage(1)}}/></div>
+ return <section>{auditId&&<ConnectionAudit path={`${BASE}/devices/${auditId}/connection-audit`} onClose={()=>setAuditId(null)}/>}<div className="heading"><p>Consulte as ativações da sua parceria. Use a pesquisa para localizar um dispositivo pelo MAC.</p><input className="search" placeholder="Buscar MAC" value={q} onChange={e=>{setQ(e.target.value);setPage(1)}}/></div>
   {error&&<div className="alert">{error}</div>}
   <div className="device-list">{data.data.map(d=><article className="device-row" key={d.id}>
    <div className="device-top"><b className="mono break">{d.mac}</b><span className={`pill ${d.status==="active"?"healthy":d.status==="blocked"?"suspect":"down"}`}>{{active:"Ativo",blocked:"Bloqueado",revoked:"Removido"}[d.status]||"Indisponível"}</span></div>
    <div className="device-meta"><div><small>Código</small><strong>{d.code||"Não informado"}</strong></div><div><small>Ativado em</small><strong>{new Date(d.activatedAt).toLocaleString("pt-BR")}</strong></div><div><small>Origem da licença</small><strong>{d.licenseSource==="reseller_stock"?"Estoque de revenda":"Parceria"}</strong></div></div>
+   <button className="outline device-action" onClick={()=>setAuditId(d.id)}>Conexão / URL</button>
    {d.status!=="revoked"&&<button className="outline device-action" disabled={busy===d.id} onClick={()=>unlink(d)}>{busy===d.id?"Processando…":"Desvincular desta parceria"}</button>}
   </article>)}{!data.data.length&&<div className="empty">Nenhum dispositivo encontrado.</div>}</div>
   <div className="pagination"><span>{fmt(data.meta.total)} registro(s) · Página {page}/{data.meta.totalPages}</span><div><button className="outline" disabled={page<=1} onClick={()=>setPage(x=>x-1)}>Anterior</button><button className="outline" disabled={page>=data.meta.totalPages} onClick={()=>setPage(x=>x+1)}>Próxima</button></div></div>
