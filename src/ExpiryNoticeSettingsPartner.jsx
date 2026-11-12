@@ -3,7 +3,7 @@ import { api } from "./api.js";
 
 const PATH = "/content-partner/clients/expiry-notice-settings";
 const DEFAULTS = {
-  enabled: false, daysBefore: 3, messageMode: "service",
+  enabled: false, daysBefore: 3, messageMode: "service", deliveryMode: "daily",
   customBefore: "Seu acesso vence em {prazo}.",
   customToday: "Seu acesso vence hoje.",
 };
@@ -72,6 +72,14 @@ export default function ExpiryNoticeSettingsPartner() {
               <option value="custom">Personalizado</option>
             </select>
           </div>
+        </div>
+        <div style={{ margin: "12px 0 16px" }}>
+          <label className="label" htmlFor="expiry-delivery">Frequência dos avisos</label>
+          <select id="expiry-delivery" value={form.deliveryMode} onChange={e => set("deliveryMode", e.target.value)}>
+            <option value="daily">Uma vez por dia</option>
+            <option value="every_open">Toda vez que o aplicativo abrir e conectar</option>
+          </select>
+          <p style={{ color: "#acbed8", fontSize: 12 }}>O aviso não se repete quando o WebSocket reconecta. Vídeos não serão interrompidos.</p>
         </div>
         {form.messageMode === "custom" && <div className="rowfields">
           <div>

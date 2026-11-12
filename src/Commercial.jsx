@@ -28,6 +28,8 @@ export function PartnerDevices(){
  const [auditId,setAuditId]=useState(null);
  const [q,setQ]=useState(""),[page,setPage]=useState(1),[data,setData]=useState({data:[],meta:{total:0,totalPages:1}}),[error,setError]=useState(""),[busy,setBusy]=useState(null),[tick,setTick]=useState(0);
  useEffect(()=>{let cancelled=false;const timer=setTimeout(()=>{api(BASE+"/devices",{query:{q,page,pageSize:20}}).then(r=>{if(!cancelled){setData(r);setError("")}}).catch(e=>{if(!cancelled)setError(e.message)})},250);return()=>{cancelled=true;clearTimeout(timer)}},[q,page,tick]);
+ // Atualiza apenas a lista aberta; não cria uma consulta por TV.
+ useEffect(()=>{if(auditId)return;const timer=setInterval(()=>{if(!document.hidden)setTick(x=>x+1)},20000);return()=>clearInterval(timer)},[auditId]);
  const unlink=async d=>{
   if(!window.confirm(`Desvincular ${d.mac} da sua parceria? O acesso desta lista será encerrado e as credenciais apagadas. Não há reembolso automático de créditos.`))return;
   const reason=window.prompt("Motivo do desvínculo (obrigatório):", "Cliente saiu da parceria");if(!reason||reason.trim().length<3)return;
@@ -37,6 +39,7 @@ export function PartnerDevices(){
   {error&&<div className="alert">{error}</div>}
   <div className="device-list">{data.data.map(d=><article className="device-row" key={d.id}>
    <div className="device-top"><b className="mono break">{d.mac}</b><span className={`pill ${d.status==="active"?"healthy":d.status==="blocked"?"suspect":"down"}`}>{{active:"Ativo",blocked:"Bloqueado",revoked:"Removido"}[d.status]||"Indisponível"}</span></div>
+   {d.live?.online && <div className="device-meta"><div><small>IP observado</small><strong>{d.live.ip || 'Indisponível'}</strong></div><div><small>Assistindo agora</small><strong>{d.live.playback?.title || 'Sem reprodução ativa'}</strong></div></div>}
    <div className="device-meta"><div><small>Código</small><strong>{d.code||"Não informado"}</strong></div><div><small>Ativado em</small><strong>{new Date(d.activatedAt).toLocaleString("pt-BR")}</strong></div><div><small>Origem da licença</small><strong>{d.licenseSource==="reseller_stock"?"Estoque de revenda":"Parceria"}</strong></div></div>
    <button className="outline device-action" onClick={()=>setAuditId(d.id)}>Conexão / URL</button>
    {d.status!=="revoked"&&<button className="outline device-action" disabled={busy===d.id} onClick={()=>unlink(d)}>{busy===d.id?"Processando…":"Desvincular desta parceria"}</button>}
