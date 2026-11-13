@@ -1,5 +1,6 @@
 import React,{useEffect,useState,useCallback} from "react";
 import { api,login,logout,getAuth } from "./api.js";
+import SupportCenter from "./SupportCenter.jsx";
 import {CommercialOverview,PartnerDevices,CreditAllocationModal} from "./Commercial.jsx";
 import { Customers, LicensesAndActivations, Messages, AccessHistory, BillingHistory, AppDownloads, CreditsLedger, WebPlayer, PartnerAccount } from "./PartnerOperations.jsx";
 import { connectRealtime } from "./realtime.js";
@@ -13,7 +14,7 @@ import "./password-reset.css";
 import { consumeInviteRequest } from "./invite-link.js";
 const NAV_GROUPS=[
  {label:"Visão geral",items:[["overview","Início","dashboard"]]},
- {label:"Atendimento",items:[["customers","Clientes","users"],["devices","Dispositivos","monitor"],["licenses","Licenças","shield"]]},
+ {label:"Atendimento",items:[["support","Atendimento simples","activity"],["customers","Clientes","users"],["devices","Dispositivos","monitor"],["licenses","Licenças","shield"]]},
  {label:"Ativação e conteúdo",items:[["codes","Códigos de parceria","key"],["white-label","Meus aplicativos","download"],["studio","Estúdio Visual","monitor"],["web","Player Web","globe"],["servers","Servidores","server"],["monitor","Monitoramento","activity"],["downloads","Downloads e links","download"]]},
  {label:"Comercial",items:[["commercial","Contrato e licenças","wallet"],["credits","Créditos e extrato","coins"],["billing","Faturas e pagamentos","receipt"]]},
  {label:"Conta",items:[["notifications","Notificações","bell"],["access","Histórico de login","history"],["account","Minha conta","account"],["help","Central de Ajuda","help"]]},
@@ -21,6 +22,7 @@ const NAV_GROUPS=[
 const SCREEN_SUBTITLES={
  overview:"Acompanhe sua operação, códigos e infraestrutura em um só lugar.",
  customers:"Gerencie os clientes associados à sua parceria.",
+ support:"Diagnóstico guiado da TV e orientações para resolver problemas.",
  devices:"Consulte seus dispositivos e os vínculos de ativação.",
  licenses:"Acompanhe licenças e ativações do seu contrato.",
  codes:"Organize os códigos de parceria e seus servidores.",
@@ -147,6 +149,7 @@ function PartnerPortalApp(){
  {showUnread&&unread>0&&screen!=="notifications"&&<div className="partner-unread" role="status"><span className="alert-content"><Icon name="bell" size={20}/> Você tem <b>{unread} comunicado(s) não lido(s)</b> da Delta TV.</span><button className="primary" onClick={()=>navigate("notifications")}>Ver mensagens</button></div>}
  {data.providers.some(p=>["slow","suspect","down"].includes(p.health?.state))&&! ["servers","monitor"].includes(screen)&&<div className="partner-alert" role="status"><span className="alert-content"><Icon name="alert" size={20}/> Há servidores da sua parceria com lentidão ou indisponibilidade.</span><button className="outline" onClick={()=>navigate("monitor")}>Ver monitoramento</button></div>}
  {!data.monitorEnabled&&["overview","servers","monitor"].includes(screen)&&<div className="notice">O monitor automático está desligado. Solicite à administração a ativação do monitoramento.</div>}
+ {screen==="support"&&<SupportCenter base="/partner"/>}
  {screen==="customers"&&<Customers/>}
  {screen==="licenses"&&<LicensesAndActivations/>}
  {screen==="web"&&<WebPlayer/>}
