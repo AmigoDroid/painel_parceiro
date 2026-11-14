@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { api, logout } from "./api.js";
-import { toCents, moneyInput } from "./money.js";
+import { toCents, moneyInput } from "@deltatv/ui/money";
 import { CommercialOverview, fmt } from "./Commercial.jsx";
 import ProfilePage from "./ProfilePage.jsx";
 import ExpiryNoticeSettingsPartner from "./ExpiryNoticeSettingsPartner.jsx";

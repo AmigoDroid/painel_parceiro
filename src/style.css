@@ -361,3 +361,6 @@ button,select,input[type="checkbox"]{touch-action:manipulation}
 .welcome-visual{pointer-events:none}
 /* Do not let long page descriptions become 260px-high flex items on mobile. */
 @media(max-width:720px){.heading p{flex:0 0 auto;width:100%}}
+
+/* Contraste consistente da busca compartilhada no tema escuro. */
+.task-finder{--ui-surface:#19263e;--ui-text:#f1f6ff;--ui-border:#5b7096;--ui-accent:#a49af9;--ui-hover:#304267}
