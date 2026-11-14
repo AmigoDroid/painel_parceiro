@@ -1,4 +1,5 @@
 import React,{useEffect,useState,useCallback} from "react";
+import "./operation-center.css";
 import EasyStart, { EasyPageGuide } from "./EasyStart.jsx";
 import { useSimpleMode } from "./useSimpleMode.js";
 import "./easy-start.css";
@@ -17,10 +18,12 @@ import "./password-reset.css";
 import { consumeInviteRequest } from "./invite-link.js";
 const NAV_GROUPS=[
  {label:"Visão geral",items:[["overview","Início","dashboard"]]},
- {label:"Atendimento",items:[["support","Resolver problema da TV","activity"],["customers","Clientes","users"],["devices","Dispositivos","monitor"],["licenses","Licenças","shield"]]},
- {label:"Ativação e conteúdo",items:[["codes","Códigos para ativar TVs","key"],["white-label","Meus aplicativos","download"],["studio","Estúdio Visual","monitor"],["web","Player Web","globe"],["servers","Links de conteúdo","server"],["monitor","Qualidade dos links","activity"],["downloads","Downloads e links","download"]]},
- {label:"Comercial",items:[["commercial","Contrato e licenças","wallet"],["credits","Créditos e extrato","coins"],["billing","Faturas e pagamentos","receipt"]]},
- {label:"Conta",items:[["notifications","Notificações","bell"],["access","Histórico de login","history"],["account","Minha conta","account"],["help","Central de Ajuda","help"]]},
+ {label:"Pagamentos",items:[["billing","Faturas e pagamentos","receipt"],["credits","Créditos e extrato","coins"]]},
+ {label:"Dispositivos",items:[["devices","Minhas TVs","monitor"],["customers","Clientes","users"],["support","Resolver problema da TV","activity"]]},
+ {label:"Licenças",items:[["licenses","Licenças e ativações","shield"],["commercial","Contrato e licenças","wallet"]]},
+ {label:"Ativar aplicativo",items:[["codes","Códigos para ativar TVs","key"],["white-label","Meus aplicativos","download"],["web","Player Web","globe"],["downloads","Downloads e links","download"]]},
+ {label:"Servidores e personalização",items:[["servers","Links de conteúdo","server"],["monitor","Qualidade dos links","activity"],["studio","Estúdio Visual","monitor"]]},
+ {label:"Minha conta",items:[["account","Minha conta","account"],["access","Histórico de login","history"],["notifications","Notificações","bell"],["help","Central de Ajuda","help"]]},
 ];
 const SIMPLE_PARTNER = new Set(["overview", "support", "customers", "devices", "codes", "servers", "monitor", "notifications", "help", "account"]);
 const SCREEN_SUBTITLES={
@@ -152,6 +155,7 @@ function PartnerPortalApp(){
  {simpleMode && screen!=="overview" && <EasyPageGuide role="partner" page={screen} onBack={()=>navigate("overview")}/>}
  <HelpExperience screen={screen} portal="content" userId={user.id} onNavigate={navigate}/>
  {screen==="overview"&&<EasyStart role="partner" onNavigate={navigate}/>}
+ {screen==="overview"&&<section className="operation-center" aria-label="Acessos rápidos"><header className="operation-center-heading"><span>Seu espaço de trabalho</span><h2>O que você precisa fazer?</h2><p>Entre diretamente na área desejada.</p></header><div className="operation-center-grid">{[["billing","Ver pagamentos","Faturas e cobranças"],["devices","Localizar uma TV","Ativações e vínculos"],["licenses","Gerenciar licenças","Disponibilidade e uso"],["codes","Ativar aplicativo","Códigos para a TV"],["account","Minha conta","Perfil e segurança"]].map(([id,title,desc])=><button type="button" key={id} className="operation-center-action" onClick={()=>navigate(id)}><strong>{title}</strong><span>{desc}</span><b aria-hidden="true">›</b></button>)}</div></section>}
  {error&&<div className="alert">{error}</div>}
  {showUnread&&unread>0&&screen!=="notifications"&&<div className="partner-unread" role="status"><span className="alert-content"><Icon name="bell" size={20}/> Você tem <b>{unread} comunicado(s) não lido(s)</b> da Delta TV.</span><button className="primary" onClick={()=>navigate("notifications")}>Ver mensagens</button></div>}
  {data.providers.some(p=>["slow","suspect","down"].includes(p.health?.state))&&! ["servers","monitor"].includes(screen)&&<div className="partner-alert" role="status"><span className="alert-content"><Icon name="alert" size={20}/> Há servidores da sua parceria com lentidão ou indisponibilidade.</span><button className="outline" onClick={()=>navigate("monitor")}>Ver monitoramento</button></div>}
