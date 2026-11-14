@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="theme-color" content="#090d17"/>
+  <meta name="referrer" content="no-referrer"/>
+  <title>Delta TV | Painel do Parceiro</title>
+  <meta name="delta-invite-version" content="standalone-v2"/>
+  <script>
+  // Identifica convites ANTES de carregar o portal principal. Evita depender
+  // do App.jsx / WebSocket / modulos privados quando a rota e publica.
+  (() => {
+    const url = new URL(window.location.href);
+    const pathMatch = url.pathname.match(/^\/convite\/([^/]+)\/?$/);
+    const isInviteRoute = !!pathMatch || url.pathname === "/convite" || url.pathname === "/convite/";
+    const hash = new URLSearchParams(url.hash.startsWith("#") ? url.hash.slice(1) : "");
+    const isLegacy = url.searchParams.has("convite") || hash.has("convite");
+    if (!isInviteRoute && !isLegacy) return;
+    const storageKey = "delta-partner-pending-invite";
+    let token = pathMatch?.[1] || url.searchParams.get("convite") || hash.get("convite") || "";
+    try { token = decodeURIComponent(token); } catch { token = ""; }
+    // Somente recarregamentos de /convite leem o token da aba atual.
+    if (!token && isInviteRoute) {
+      try { token = sessionStorage.getItem(storageKey) || ""; } catch {}
+    }
+    if (token) {
+      try { sessionStorage.setItem(storageKey, token); } catch {}
+    }
+    window.__DELTA_PARTNER_INVITE_REQUEST__ = { token };
+    // Nao deixar o token na URL, mas MANTER a rota publica visivel.
+    url.pathname = "/convite";
+    url.searchParams.delete("convite");
+    if (hash.has("convite")) url.hash = "";
+    window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+  })();
+  </script>
+  <script type="module" crossorigin src="/assets/index-BVKviVix.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+</body>
+</html>

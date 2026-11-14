@@ -1,5 +1,6 @@
 /** Catálogo de ações e sinônimos. Rotas existentes, nunca cria autorizações. */
 export const TASKS = [
+  {label:"Enviar mensagem para TVs",route:"tvmessages",description:"Selecionar clientes, revisar comunicado e acompanhar leituras",keywords:["mensagem","comunicado","aviso","tv","clientes"]},
   {"label": "Cadastrar cliente", "route": "customers", "description": "Gerenciar clientes do parceiro", "keywords": ["novo", "cliente", "usuario", "cadastro"]},
   {"label": "Localizar TV", "route": "devices", "description": "Vínculos e ativações de dispositivos", "keywords": ["mac", "aparelho", "tv"]},
   {"label": "Diagnosticar TV offline", "route": "support", "description": "Identificar problemas da TV", "keywords": ["falha", "erro", "conexao", "suporte"]},

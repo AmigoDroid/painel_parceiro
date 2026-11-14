@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync } from './read-source.js';
 const sim=readFileSync(new URL('../src/RokuSimulator.jsx',import.meta.url),'utf8');
 const css=readFileSync(new URL('../src/roku-simulator.css',import.meta.url),'utf8');
 const studio=readFileSync(new URL('../src/AppearanceStudio.jsx',import.meta.url),'utf8');

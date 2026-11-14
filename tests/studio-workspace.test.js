@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {readFileSync} from './read-source.js';
 import {SCREEN_DEFAULTS, STUDIO_FIELDS, STUDIO_SCREENS, normalizeAppearance, updateAppearanceScreen} from '../src/appearance-screen-settings.js';
 const workspace=readFileSync(new URL('../src/StudioWorkspace.jsx', import.meta.url),'utf8');
 const sim=readFileSync(new URL('../src/RokuSimulator.jsx',import.meta.url),'utf8');
