@@ -100,7 +100,7 @@ export function WebPlayer(){
   setBusy(true);setError("");try{await api(BASE+`/web-access/${x.id}/${action}`,{method:"POST",body:{reason}});setRev(v=>v+1)}catch(e){setError(e.message)}finally{setBusy(false)};
  };
  const reveal=async x=>{setBusy(true);setError("");try{const creds=await api(BASE+`/web-access/${x.id}/credentials`);setRevealed({code:x.code,...creds})}catch(e){setError(e.message)}finally{setBusy(false)}};
- return <section><div className="heading"><p>Player Web emitidos pelas revendas usando seus códigos autorizados. A cobrança segue seu contrato, sem vínculo obrigatório com as revendas.</p></div><Notice>Controle a emissão na tela Códigos e confirme a habilitação contratual com o Superadmin. Usuário e senha são mostrados somente mediante consulta auditada.</Notice>
+ return <section><div className="heading"><p>Player Web emitidos pelas revendas usando seus códigos autorizados. A cobrança segue seu contrato, sem vínculo obrigatório com as revendas.</p></div><Notice>Controle a emissão na tela Códigos e confirme a habilitação contratual com a DeltaTV. Usuário e senha são mostrados somente mediante consulta auditada.</Notice>
  <ErrorView message={error||loadError}/>{loading&&<p>Carregando…</p>}
  <div className="cards two-cols">{(data.data||[]).map(x=><article className="servercard" key={x.id}>
   <div className="between"><b className="mono">{x.code}</b><span className={`pill ${x.status==="active"?"healthy":"checking"}`}>{status(x.status)}</span></div>

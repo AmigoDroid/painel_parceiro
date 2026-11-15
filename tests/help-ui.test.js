@@ -4,7 +4,8 @@ import { readFileSync } from './read-source.js';
 const read = f => readFileSync(new URL(f, import.meta.url), 'utf8');
 test('parceiro exibe ajuda contextual e tutorial persistido, sem HTML remoto', () => {
   const app=read('../src/App.jsx'); const guide=read('../src/HelpExperience.jsx');
-  assert.match(app, /"help","Central de Ajuda"/);
+  assert.match(app, /"help","Guias e tutoriais"/);
+  assert.match(app, /"tickets","Central de Suporte"/);
   assert.match(app, /data-help-target/);
   assert.match(guide, /"\/partner\/help"/);
   assert.match(guide, /welcome-seen/);

@@ -127,7 +127,7 @@ export default function AppearanceStudio({ apps: initialApps = [] }) {
        onTemplate={chooseTemplate} onSave={save} onPublish={publish} busy={busy} dirty={dirty}
        version={version} error={error} notice={notice} actionsDisabled={!draft.heroTitle.trim()}>
       <section className="panel ap-export-studio">
-        <h3>Gerar aplicativo Roku</h3><p>Após configurar e publicar o visual, escolha a modalidade de entrega. O Superadmin controla a liberação.</p>
+        <h3>Gerar aplicativo Roku</h3><p>Após configurar e publicar o visual, escolha a modalidade de entrega. A DeltaTV controla a liberação.</p>
         <div className="ap-brand-assets">
           <h4>Arquivos de identidade para a loja e a TV</h4>
           <p>Opcional: envie imagens PNG nos tamanhos abaixo. Se faltar alguma, o sistema cria um modelo básico com a marca; para publicação profissional, envie sua arte.</p>

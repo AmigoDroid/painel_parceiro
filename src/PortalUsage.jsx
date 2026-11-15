@@ -28,7 +28,7 @@ export default function PortalUsage(){
     <h4>Consumo por parceiro da minha rede</h4>
     <div style={{overflowX:'auto'}}><table style={{width:'100%'}}><thead><tr><th>Parceiro proprietário</th><th>GB Node</th><th>Nginx sem medição</th></tr></thead><tbody>{(view.byPartner||[]).map(x=><tr key={x.partnerId}><td><code>{x.partnerId}</code></td><td>{gb(x.nodeBytes/1e9)}</td><td>{x.nginxUnmeteredRequests}</td></tr>)}</tbody></table></div>
     <details><summary>Até 50 dispositivos com maior tráfego Node</summary><div style={{overflowX:'auto',marginTop:10}}><table><thead><tr><th>Parceiro</th><th>Dispositivo</th><th>GB Node</th></tr></thead><tbody>{top.map(x=><tr key={`${x.partnerId}/${x.deviceId}`}><td>{x.partnerId}</td><td><code>{x.deviceId}</code></td><td>{gb(x.nodeGb)}</td></tr>)}</tbody></table></div></details>
-    <p className="muted">A medida é parcial: transmissões delegadas ao Nginx aparecem como não medidas. O número de requisições não representa GB ou espectadores únicos. Dados de outras redes, custos internos do Superadmin e IPs não são exibidos.</p>
+    <p className="muted">A medida é parcial: transmissões delegadas ao Nginx aparecem como não medidas. O número de requisições não representa GB ou espectadores únicos. Dados de outras redes, custos internos da DeltaTV e IPs não são exibidos.</p>
    </>}
  </section>;
 }

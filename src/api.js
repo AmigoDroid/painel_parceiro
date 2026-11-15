@@ -20,6 +20,7 @@ export const verifyPartnerInvite = (token) => raw("/auth/partner-invite/verify",
 export const completePartnerInvite = (body) => raw("/auth/partner-invite/complete", { method: "POST", body });
 // Convite COMERCIAL de acesso pré-pago ao painel (isolado do convite administrativo legado).
 export const verifyPortalSalesInvite = token => raw("/auth/portal-sales-invite/verify",{method:"POST",body:{token}});
+export const recheckPortalSalesInvite = body => raw("/auth/portal-sales-invite/recheck",{method:"POST",body});
 export const completePortalSalesInvite = body => raw("/auth/portal-sales-invite/complete",{method:"POST",body});
 
 // Públicos: são chamados sem sessão para não expor um access token num link de e-mail.
