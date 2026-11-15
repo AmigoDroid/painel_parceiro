@@ -1,9 +1,10 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import InviteRegistration from "./InviteRegistration.jsx";
+import CommercialInviteRegistration from "./CommercialInviteRegistration.jsx";
 import "./style.css";
 
-const STORAGE_KEY = "delta-partner-pending-invite";
+const STORAGE_KEY = window.__DELTA_PARTNER_INVITE_REQUEST__?.type === "commercial" ? "delta-partner-pending-commercial-invite" : "delta-partner-pending-invite";
 const request = window.__DELTA_PARTNER_INVITE_REQUEST__ || { token: "" };
 
 function goToLogin() {
@@ -27,6 +28,6 @@ class InviteErrorBoundary extends React.Component {
 
 createRoot(document.getElementById("root")).render(
   <InviteErrorBoundary>
-    <InviteRegistration token={request.token} onBack={goToLogin} />
+    {request.type === "commercial" ? <CommercialInviteRegistration token={request.token} onBack={goToLogin} /> : <InviteRegistration token={request.token} onBack={goToLogin} />}
   </InviteErrorBoundary>
 );

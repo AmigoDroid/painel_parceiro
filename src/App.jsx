@@ -18,6 +18,7 @@ import WhiteLabelApps from "./WhiteLabelApps.jsx";
 import AppearanceStudio from "./AppearanceStudio.jsx";
 import HelpExperience from "./HelpExperience.jsx";
 import InviteRegistration from "./InviteRegistration.jsx";
+import CommercialInviteRegistration from "./CommercialInviteRegistration.jsx";
 import { ForgotPassword } from "./PasswordReset.jsx";
 import "./password-reset.css";
 import { consumeInviteRequest } from "./invite-link.js";
@@ -286,6 +287,6 @@ export default function App() {
    window.removeEventListener("hashchange",onLocationChange);
   };
  },[]);
- if(invite)return <InviteRegistration token={invite.token} onBack={()=>setInvite(null)}/>;
+ if(invite)return invite.type==="commercial" ? <CommercialInviteRegistration token={invite.token} onBack={()=>setInvite(null)}/> : <InviteRegistration token={invite.token} onBack={()=>setInvite(null)}/>;
  return <PartnerPortalApp key={identity}/>;
 }

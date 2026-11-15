@@ -22,25 +22,27 @@
   (() => {
     const url = new URL(window.location.href);
     const pathMatch = url.pathname.match(/^\/convite\/([^/]+)\/?$/);
+    const commercialMatch = url.pathname.match(/^\/convite-comercial\/([^/]+)\/?$/);
+    const isCommercialRoute = !!commercialMatch || url.pathname === "/convite-comercial" || url.pathname === "/convite-comercial/";
     const isInviteRoute = !!pathMatch || url.pathname === "/convite" || url.pathname === "/convite/";
     const hash = new URLSearchParams(url.hash.startsWith("#") ? url.hash.slice(1) : "");
     const isLegacy = url.searchParams.has("convite") || hash.has("convite");
-    if (!isInviteRoute && !isLegacy) return;
-    const storageKey = "delta-partner-pending-invite";
-    let token = pathMatch?.[1] || url.searchParams.get("convite") || hash.get("convite") || "";
+    if (!isInviteRoute && !isLegacy && !isCommercialRoute) return;
+    const storageKey = isCommercialRoute ? "delta-partner-pending-commercial-invite" : "delta-partner-pending-invite";
+    let token = commercialMatch?.[1] || (isCommercialRoute ? hash.get("token") : null) || pathMatch?.[1] || url.searchParams.get("convite") || hash.get("convite") || "";
     try { token = decodeURIComponent(token); } catch { token = ""; }
     // Somente recarregamentos de /convite leem o token da aba atual.
-    if (!token && isInviteRoute) {
+    if (!token && (isInviteRoute || isCommercialRoute)) {
       try { token = sessionStorage.getItem(storageKey) || ""; } catch {}
     }
     if (token) {
       try { sessionStorage.setItem(storageKey, token); } catch {}
     }
-    window.__DELTA_PARTNER_INVITE_REQUEST__ = { token };
+    window.__DELTA_PARTNER_INVITE_REQUEST__ = { token, type: isCommercialRoute ? "commercial" : "legacy" };
     // Nao deixar o token na URL, mas MANTER a rota publica visivel.
-    url.pathname = "/convite";
+    url.pathname = isCommercialRoute ? "/convite-comercial" : "/convite";
     url.searchParams.delete("convite");
-    if (hash.has("convite")) url.hash = "";
+    if (hash.has("convite") || isCommercialRoute) url.hash = "";
     window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
   })();
   </script>
