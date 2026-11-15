@@ -57,6 +57,7 @@ const SCREEN_SUBTITLES={
 const SCREEN_TITLES=Object.fromEntries(NAV_GROUPS.flatMap(g=>g.items.map(i=>[i[0],i[1]])));
 const PARTNER_ROUTES = new Set(Object.keys(SCREEN_TITLES));
 export const readPartnerRoute = (hash = window.location.hash) => {
+ if(new URLSearchParams(window.location.search).has('portal_sales_order'))return 'portal-sales';
  const id = hash.startsWith('#/') ? hash.slice(2).split('?')[0] : 'overview';
  return PARTNER_ROUTES.has(id) ? id : 'overview';
 };

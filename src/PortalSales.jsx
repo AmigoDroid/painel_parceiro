@@ -1,5 +1,6 @@
 import {useCallback,useEffect,useState} from 'react';
 import {api} from './api.js';
+import PortalUsage from './PortalUsage.jsx';
 const brl=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const cents=v=>Math.round(Number(String(v).replace(',','.'))*100);
 const date=v=>v?new Date(v).toLocaleDateString('pt-BR'):'—';
@@ -12,15 +13,41 @@ export default function PortalSales(){
  const [renewRequestId,setRenewRequestId]=useState(()=>crypto.randomUUID());
  const [invite,setInvite]=useState({invitedName:'',invitedEmail:'',inviteType:'customer',planCode:'',months:1,price:'',monthly:'0'});
  const [invitations,setInvitations]=useState([]),[networkTree,setNetworkTree]=useState([]),[createdInvite,setCreatedInvite]=useState(null);
+ const [returnProcessed,setReturnProcessed]=useState(false);
  const load=useCallback(async()=>{const [overview,history,tree]=await Promise.all([api('/content-partner/portal-sales'),api('/content-partner/portal-sales/invitations'),api('/content-partner/portal-sales/tree')]);setData(overview);setInvitations(history.items||[]);setNetworkTree(tree.items||[]);},[]);
  useEffect(()=>{load().catch(e=>setError(e.message));},[load]);
+ useEffect(()=>{const timer=setInterval(()=>{if(document.visibilityState==='visible')load().catch(()=>{});},30000);
+  return()=>clearInterval(timer);},[load]);
+ // Retorno do navegador não é prova de pagamento: backend consulta /payment_check.
+ useEffect(()=>{if(returnProcessed)return;
+   const params=new URLSearchParams(window.location.search);
+   const id=params.get('portal_sales_order'),transactionNsu=params.get('transaction_nsu'),slug=params.get('slug');
+   if(!id)return;
+   setReturnProcessed(true);
+   window.history.replaceState(window.history.state,'',window.location.pathname+'#/portal-sales');
+   if(!transactionNsu||!slug){setNotice('Se você concluiu o pagamento, aguarde a confirmação automática pela InfinitePay.');return;}
+   api(`/content-partner/portal-sales/orders/${encodeURIComponent(id)}/confirm-return`,{method:'POST',body:{transactionNsu,slug}})
+     .then(result=>{setNotice(result.paid?'Pagamento verificado e estoque liberado.':'Pagamento ainda não confirmado.');return load();})
+     .catch(e=>setError(e.message));
+ },[returnProcessed,load]);
  const act=async(url,body)=>{setBusy(true);setError('');setNotice('');try{await api(url,{method:'POST',body});setNotice('Operação registrada e auditada.');await load();return true;}catch(e){setError(e.message);return false;}finally{setBusy(false)}};
  if(!data)return <div className="panel" style={{padding:18}}>{error||'Carregando sua rede comercial…'}</div>;
  const stock=data.stock||[],children=data.children||[],contracts=data.contracts||[];
  const selected=contracts.find(c=>c.customer_partner_id===renew.customerPartnerId);
  return <div style={{display:'grid',gap:16}}>
-  <div className="panel" style={{padding:18}}><h2>Minha rede de venda do Painel do Parceiro</h2><p className="muted">Distribua acessos ao portal de parceiros, não licenças de TV. Seu perfil comercial: <strong>{data.seller.role==='master'?'Master':'Submaster'}</strong>.</p><p className="muted">Compras de estoque e pagamentos são liberados pelo Superadmin após confirmação do recebimento. As revendas de TVs permanecem separadas.</p></div>
+  <div className="panel" style={{padding:18}}><h2>Minha rede de venda do Painel do Parceiro</h2><p className="muted">Distribua acessos ao portal de parceiros, não licenças de TV. Seu perfil comercial: <strong>{data.seller.role==='master'?'Master':'Submaster'}</strong>.</p><p className="muted">Pedidos com checkout automático liberam meses após conferência na API do gateway; pedidos manuais exigem confirmação do Superadmin. Revendas de TVs permanecem separadas.</p></div>
+  <PortalUsage/>
   {error&&<div className="alert" role="alert">{error}</div>}{notice&&<div className="notice" role="status">{notice}</div>}
+  <section className="panel" style={{padding:18,display:'grid',gap:10}}><h3>Meus pedidos de estoque para o Painel do Parceiro</h3>
+    <p className="muted">O Superadmin emite o pedido conforme o gateway padrão. Ao receber o checkout, você pode pagar pela InfinitePay (Pix/cartão) ou pelo Mercado Pago (Pix). Estoque somente após confirmação do provedor.</p>
+    <div style={{overflowX:'auto'}}><table style={{width:'100%'}}><thead><tr><th>Plano</th><th>Meses</th><th>Valor</th><th>Meio</th><th>Situação</th><th>Pagar</th></tr></thead><tbody>{(data.orders||[]).map(o=><tr key={o.id}>
+      <td>{o.plan_code}</td><td>{o.quantity_months}</td><td>{brl(o.total_cents)}</td><td>{o.payment_gateway||'manual'}</td><td>{o.status}</td><td>
+       {o.status==='pending'&&o.payment_gateway!=='manual'&&<button disabled={busy} onClick={()=>act(`/content-partner/portal-sales/orders/${o.id}/checkout`,{})}>Gerar / atualizar link</button>}
+       {o.checkout_url&&<a href={o.checkout_url} rel="noreferrer" target="_blank">Abrir checkout</a>}
+       {o.pix_copy_paste&&<details><summary>Pix copia e cola</summary><textarea readOnly value={o.pix_copy_paste} onFocus={e=>e.target.select()}/></details>}
+      </td>
+    </tr>)}</tbody></table></div>
+  </section>
   <div className="stats">{stock.map(s=><div key={s.plan_code} className="stat"><small>{s.plan_name}</small><strong>{s.available_months}</strong><span>meses pré-pagos disponíveis</span></div>)}{!stock.length&&<div className="stat"><strong>0</strong><span>Solicite estoque ao Superadmin</span></div>}</div>
   <section className="panel" style={{padding:18,display:'grid',gap:12}}>
    <h3>Cadastrar parceiro ou Submaster por convite</h3>
