@@ -1,3 +1,5 @@
+import {Breadcrumb,PlatformBrand} from "../../shared/PanelExperience.jsx";
+import { panelAllows } from "../../shared/permissions.js";
 import TaskFinder from "@deltatv/ui/TaskFinder";
 import DeletionDialog from "./DeletionDialog.jsx";
 import { TASKS } from "./task-directory.js";
@@ -64,7 +66,7 @@ const Label=({children})=><span className="label">{children}</span>;
 const healthNames={healthy:"Saudável",slow:"Lento",down:"Indisponível",suspect:"Falha detectada",checking:"Em verificação",unknown:"Aguardando"};
 function State({health}) { const state=health?.state||"unknown";return <span className={`pill ${state}`}>{healthNames[state]||state}</span> }
 function PartnerPortalApp(){
- const [user,setUser]=useState(getAuth()?.user||null),[screen,setScreen]=useState(readPartnerRoute);
+ const [user,setUser]=useState((panelAllows("parceiro",getAuth()?.user)?getAuth().user:null)),[screen,setScreen]=useState(readPartnerRoute);
  const [simpleMode,setSimpleMode]=useSimpleMode("parceiro");
  const [studioApps,setStudioApps]=useState([]);
  useEffect(()=>{if(!user){setStudioApps([]);return;} let active=true;
@@ -92,7 +94,7 @@ function PartnerPortalApp(){
  // O tutorial de navegação abre o menu móvel para exibir o item real destacado.
  useEffect(()=>{const openForHelp=()=>setMobileMenu(true);window.addEventListener("deltatv-help-open-menu",openForHelp);return()=>window.removeEventListener("deltatv-help-open-menu",openForHelp)},[]);
  useEffect(()=>connectRealtime(),[]);
- useEffect(()=>{const sync=()=>setUser(getAuth()?.user||null);window.addEventListener("auth-changed",sync);return()=>window.removeEventListener("auth-changed",sync)},[]);
+ useEffect(()=>{const sync=()=>setUser((panelAllows("parceiro",getAuth()?.user)?getAuth().user:null));window.addEventListener("auth-changed",sync);return()=>window.removeEventListener("auth-changed",sync)},[]);
  useEffect(()=>{
   const onEscape=e=>{if(e.key==="Escape"){setProfileMenu(false);setMobileMenu(false)}};
   window.addEventListener("keydown",onEscape);
@@ -187,7 +189,7 @@ function PartnerPortalApp(){
   <div className="sidefoot"><span className={`side-status-dot ${data.monitorEnabled?"is-on":""}`}/><div><span>Monitoramento</span><b>{data.monitorEnabled?"Ativado":"Desativado"}</b></div></div>
  </aside>
  <section className="main"><div style={{padding:"14px 22px 0"}}><TaskFinder tasks={TASKS.filter(task=>task.route!=="studio"||studioApps.length>0)} onNavigate={navigate} /></div><header className="app-header"><div className="header-left"><button type="button" className="partner-menu" aria-label="Abrir menu" onClick={()=>setMobileMenu(true)}><Icon name="menu" size={21}/></button><div className="page-heading"><div className="eyebrow"><span className="eyebrow-dot"/>{data.servicePlan?.features?.label||"PARCEIRO DE CONTEÚDO"}</div><h1>{SCREEN_TITLES[screen]||"Painel do parceiro"}</h1><p className="page-subtitle">{SCREEN_SUBTITLES[screen]||"Gerencie sua parceria"}</p></div></div><div className="topright"><button type="button" className="easy-mode-button" aria-pressed={!simpleMode} onClick={()=>setSimpleMode(v=>!v)}>{simpleMode?"Modo simples · mostrar tudo":"Modo completo · simplificar"}</button><button type="button" className="header-refresh" data-help-target="context-help" onClick={()=>window.dispatchEvent(new CustomEvent("deltatv-help-context",{detail:{screen}}))}>? Ajuda</button><button type="button" className="header-refresh" onClick={refresh} title="Atualizar informações"><Icon name="refresh" size={18}/><span>Atualizar</span></button><button type="button" className="header-notifications" aria-label={`Notificações${unread?` (${unread} não lidas)`:""}`} onClick={()=>navigate("notifications")}><Icon name="bell" size={19}/>{showBadge&&unread>0&&<span className="notif-dot"/>}</button><div className="profile-wrap"><button type="button" className="profile-trigger" aria-haspopup="menu" aria-expanded={profileMenu} onClick={()=>setProfileMenu(v=>!v)}><span className="avatar">{profileDetails?.profile?.avatarData?<img src={profileDetails.profile.avatarData} className="profile-menu-avatar" alt=""/>:(user.name||user.email||"P")[0].toUpperCase()}</span><span className="profile-identity"><b>{user.name||"Parceiro"}</b><small>Minha conta</small></span><Icon name="chevron" size={16}/></button>{profileMenu&&<><button type="button" className="profile-dismiss" aria-label="Fechar menu da conta" onClick={()=>setProfileMenu(false)}/><div className="profile-popover" role="menu"><div className="profile-popover-title"><b>{user.name||"Parceiro"}</b><span>{user.email||"Conta de parceiro"}</span></div><button role="menuitem" onClick={()=>navigate("account")}><Icon name="account" size={17}/> Meu perfil</button><button role="menuitem" className="logout-item" onClick={signOut}><Icon name="logout" size={17}/> Sair da conta</button></div></>}</div></div></header>
- <div className="body">
+ <div className="body"><Breadcrumb panel="parceiro" current={SCREEN_TITLES[screen]||"Início"} onHome={()=>navigate("overview")}/>
  {simpleMode && screen!=="overview" && <EasyPageGuide role="partner" page={screen} onBack={()=>navigate("overview")}/>}
  <HelpExperience screen={screen} portal="content" userId={user.id} onNavigate={navigate}/>
  {screen==="overview"&&<EasyStart role="partner" onNavigate={navigate}/>}
@@ -268,6 +270,8 @@ function PartnerPortalApp(){
 /** O formulário público tem prioridade absoluta sobre a sessão já existente. */
 export default function App() {
  const [invite,setInvite]=useState(INITIAL_INVITE);
+ const [identity,setIdentity]=useState(getAuth()?.user?.id||"anonymous");
+ useEffect(()=>{const update=()=>setIdentity(getAuth()?.user?.id||"anonymous");window.addEventListener("auth-changed",update);return()=>window.removeEventListener("auth-changed",update)},[]);
  useEffect(()=>{
   const onLocationChange=()=>{const request=consumeInviteRequest();if(request)setInvite(request)};
   window.addEventListener("popstate",onLocationChange);
@@ -278,5 +282,5 @@ export default function App() {
   };
  },[]);
  if(invite)return <InviteRegistration token={invite.token} onBack={()=>setInvite(null)}/>;
- return <PartnerPortalApp/>;
+ return <PartnerPortalApp key={identity}/>;
 }

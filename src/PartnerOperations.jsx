@@ -6,7 +6,7 @@ import ProfilePage from "./ProfilePage.jsx";
 import ExpiryNoticeSettingsPartner from "./ExpiryNoticeSettingsPartner.jsx";
 const BASE = "/content-partner";
 const money = n => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format((Number(n) || 0) / 100);
-const date = v => v ? new Date(v).toLocaleString("pt-BR") : "—";
+const date = v => v ? new Date(v).toLocaleString("pt-BR", {timeZone:"America/Sao_Paulo"}) : "—";
 const day = v => v ? String(v).slice(0,10).split("-").reverse().join("/") : "—";
 const status = s => ({ active: "Ativo", blocked: "Bloqueado", revoked: "Removido", open: "Aberta", overdue: "Vencida", paid: "Paga", partial: "Parcial", cancelled: "Cancelada", confirmed: "Confirmado", success: "Autorizado", failure: "Negado" }[s] || s || "—");
 const Notice = ({ children }) => <div className="notice">{children}</div>;
@@ -70,9 +70,9 @@ export function Messages({ onUnread=()=>{} }) {
 
 export function AccessHistory() {
  const [page,setPage]=useState(1),[outcome,setOutcome]=useState(""),[rev,setRev]=useState(0);
- const {data,error}=usePaged("/auth/history",{page,outcome,refresh:rev});
+ const {data,error,loading}=usePaged("/auth/history",{page,outcome,refresh:rev});
  const rows=data.data||[];
- return <section><div className="heading"><p>Histórico de acesso à sua conta: IP, provedor, navegador, dispositivo e horário.</p><button className="outline" onClick={()=>setRev(v=>v+1)}>Atualizar</button></div><select value={outcome} onChange={e=>{setOutcome(e.target.value);setPage(1)}}><option value="">Todos os acessos</option><option value="success">Autorizados</option><option value="failure">Negados</option></select><ErrorView message={error}/><div className="cards two-cols">{rows.map(h=><article className="servercard" key={h.id}><div className="between"><span className={`pill ${h.outcome==="success"?"healthy":"down"}`}>{status(h.outcome)}</span><small>{date(h.createdAt)}</small></div><div className="two"><span>IP</span><b className="break">{h.ip||"—"}</b></div><div className="two"><span>Provedor</span><b>{h.isp||"Não identificado"}</b></div><div className="two"><span>Local</span><b>{[h.city,h.region,h.country].filter(Boolean).join(" · ")||"—"}</b></div><div className="two"><span>Dispositivo</span><b>{h.device||"—"} · {h.os||"—"}</b></div><div className="two"><span>Navegador</span><b>{h.browser||"—"}</b></div></article>)}{!rows.length&&<div className="empty">Sem registros.</div>}</div><Pager data={data} page={page} setPage={setPage}/></section>;
+ return <section><div className="heading"><p>Histórico de acesso à sua conta: IP, provedor, navegador, dispositivo e horário.</p><button className="outline" onClick={()=>setRev(v=>v+1)}>Atualizar</button></div><select value={outcome} onChange={e=>{setOutcome(e.target.value);setPage(1)}}><option value="">Todos os acessos</option><option value="success">Autorizados</option><option value="failure">Negados</option></select><ErrorView message={error}/>{loading&&<p role="status">Carregando…</p>}<div className="cards two-cols">{rows.map(h=><article className="servercard" key={h.id}><div className="between"><span className={`pill ${h.outcome==="success"?"healthy":"down"}`}>{status(h.outcome)}</span><small>{date(h.createdAt)}</small></div><div className="two"><span>IP</span><b className="break">{h.ip||"—"}</b></div><div className="two"><span>Provedor</span><b>{h.isp||"Não identificado"}</b></div><div className="two"><span>Local</span><b>{[h.city,h.region,h.country].filter(Boolean).join(" · ")||"—"}</b></div><div className="two"><span>Dispositivo</span><b>{h.device||"—"} · {h.os||"—"}</b></div><div className="two"><span>Navegador</span><b>{h.browser||"—"}</b></div></article>)}{!loading&&!rows.length&&<div className="empty">Sem registros.</div>}</div><Pager data={data} page={page} setPage={setPage}/></section>;
 }
 
 export function BillingHistory() {
@@ -87,8 +87,8 @@ export function AppDownloads() {
 }
 
 export function CreditsLedger() {
- const [page,setPage]=useState(1);const {data,error}=usePaged(BASE+"/credit-ledger",{page});
- return <section><CommercialOverview/><div className="panel"><div className="panelhead"><div><h2>Extrato de créditos</h2><p>Créditos recebidos, reservados nos códigos e devoluções</p></div></div><ErrorView message={error}/>{(data.data||[]).map(x=><div className="entry" key={x.id}><div className="grow"><b>{x.delta>0?"+":""}{x.delta} crédito(s)</b><small>{x.note||({topup:"Recarga",purchase:"Compra",adjust:"Ajuste"}[x.kind]||"Movimentação")} · {date(x.at)}</small></div><strong>Saldo: {fmt(x.balanceAfter)}</strong></div>)}{!(data.data||[]).length&&<div className="empty">Nenhum movimento registrado.</div>}</div><Pager data={data} page={page} setPage={setPage}/></section>;
+ const [page,setPage]=useState(1);const {data,error,loading}=usePaged(BASE+"/credit-ledger",{page});
+ return <section><CommercialOverview/><div className="panel"><div className="panelhead"><div><h2>Extrato de créditos</h2><p>Créditos recebidos, reservados nos códigos e devoluções</p></div></div><ErrorView message={error}/>{loading&&<p role="status">Carregando…</p>}{(data.data||[]).map(x=><div className="entry" key={x.id}><div className="grow"><b>{x.delta>0?"+":""}{x.delta} crédito(s)</b><small>{x.note||({topup:"Recarga",purchase:"Compra",adjust:"Ajuste"}[x.kind]||"Movimentação")} · {date(x.at)}</small></div><strong>Saldo: {fmt(x.balanceAfter)}</strong></div>)}{!loading&&!(data.data||[]).length&&<div className="empty">Nenhum movimento registrado.</div>}</div><Pager data={data} page={page} setPage={setPage}/></section>;
 }
 
 export function WebPlayer(){
