@@ -1,5 +1,5 @@
-import {Breadcrumb,PlatformBrand} from "../../shared/PanelExperience.jsx";
-import { panelAllows } from "../../shared/permissions.js";
+import {Breadcrumb,PlatformBrand} from "../shared/PanelExperience.jsx";
+import { panelAllows } from "../shared/permissions.js";
 import TaskFinder from "@deltatv/ui/TaskFinder";
 import DeletionDialog from "./DeletionDialog.jsx";
 import { TASKS } from "./task-directory.js";
