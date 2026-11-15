@@ -24,7 +24,8 @@ import "./password-reset.css";
 import { consumeInviteRequest } from "./invite-link.js";
 const NAV_GROUPS=[
  {label:"Visão geral",items:[["overview","Início","dashboard"]]},
- {label:"Pagamentos",items:[["portal-sales","Vender Painel do Parceiro","wallet"],["billing","Faturas e pagamentos","receipt"],["credits","Créditos e extrato","coins"]]},
+ {label:"Pagamentos",items:[["billing","Faturas e pagamentos","receipt"],["credits","Créditos e extrato","coins"]]},
+ {label:"Rede comercial",items:[["portal-sales","Minha rede de parceiros","users"]]},
  {label:"Dispositivos",items:[["devices","Minhas TVs","monitor"],["customers","Clientes","users"],["support","Resolver problema da TV","activity"]]},
  {label:"Licenças",items:[["licenses","Licenças e ativações","shield"],["commercial","Contrato e licenças","wallet"]]},
  {label:"Ativar aplicativo",items:[["codes","Códigos para ativar TVs","key"],["white-label","Meus aplicativos","download"],["web","Player Web","globe"],["downloads","Downloads e links","download"]]},
@@ -48,7 +49,7 @@ const SCREEN_SUBTITLES={
  commercial:"Condições do contrato e capacidade disponível.",
  credits:"Acompanhe movimentações e saldos de créditos.",
  billing:"Consulte suas faturas e informações financeiras.",
- "portal-sales":"Venda de acessos ao próprio Painel do Parceiro para a sua rede comercial.",
+ "portal-sales":"Convide clientes, distribua meses de acesso e acompanhe Masters e Submasters.",
  notifications:"Confira os comunicados enviados pela administração.",
  access:"Consulte o histórico de acesso e a segurança da conta.",
  account:"Atualize os dados e preferências da sua conta.",
@@ -73,8 +74,14 @@ function PartnerPortalApp(){
  const [user,setUser]=useState((panelAllows("parceiro",getAuth()?.user)?getAuth().user:null)),[screen,setScreen]=useState(readPartnerRoute);
  const [simpleMode,setSimpleMode]=useSimpleMode("parceiro");
  const [studioApps,setStudioApps]=useState([]);
- const [canSellPortal,setCanSellPortal]=useState(false);
- useEffect(()=>{if(!user){setCanSellPortal(false);return;}let alive=true;api("/content-partner/portal-sales").then(()=>{if(alive)setCanSellPortal(true)}).catch(()=>{if(alive)setCanSellPortal(false)});return()=>{alive=false};},[user?.id]);
+ const [portalAccess,setPortalAccess]=useState({status:'loading'});
+ const refreshPortalAccess=useCallback(()=>{
+   setPortalAccess({status:'loading'});
+   return api('/content-partner/portal-sales/eligibility')
+     .then(data=>setPortalAccess({...data,status:'ready'}))
+     .catch(e=>setPortalAccess({status:'error',reason:e.message||'Não foi possível consultar a autorização comercial.'}));
+ },[]);
+ useEffect(()=>{if(!user){setPortalAccess({status:'loading'});return;}void refreshPortalAccess();},[user?.id,refreshPortalAccess]);
  useEffect(()=>{if(!user){setStudioApps([]);return;} let active=true;
   const fetchStudio=()=>api('/partner/white-label/appearance/eligible').then(r=>{if(active)setStudioApps(r.data||[])}).catch(()=>{if(active)setStudioApps([])});
   void fetchStudio();const timer=setInterval(fetchStudio,60000);
@@ -191,7 +198,7 @@ function PartnerPortalApp(){
  <aside className={`aside ${mobileMenu?"mobile-open":""}`}>
   <div className="logo"><div className="brandico">D</div><div className="brandcopy">Delta TV<small>PORTAL DO PARCEIRO</small></div><button type="button" className="close mobile-close" aria-label="Fechar menu" onClick={()=>setMobileMenu(false)}><Icon name="x" size={20}/></button></div>
   
-  <nav className="nav" aria-label="Navegação do parceiro">{NAV_GROUPS.map(group=><div key={group.label} className="partner-nav-group"><span className="partner-nav-label">{group.label}</span>{group.items.filter(([id])=>(id!=="studio"||studioApps.length>0)&&(id!=="portal-sales"||canSellPortal)&&(!simpleMode||SIMPLE_PARTNER.has(id)||screen===id||id==="portal-sales")).map(([id,name,ico])=><button type="button" className={screen===id?"active":""} aria-current={screen===id?"page":undefined} key={id} data-help-target={({overview:"home", account:"profile", "white-label":"apps", studio:"studio", servers:"servers", codes:"codes", devices:"devices", licenses:"licenses", billing:"billing", notifications:"notifications", help:"help"})[id] || undefined} onClick={()=>navigate(id)}><span className="nav-icon"><Icon name={ico} size={19}/></span><span className="nav-text">{name}</span>{id==="notifications"&&showBadge&&unread>0&&<b className="nav-count">{unread}</b>}{screen===id&&<Icon name="chevronRight" size={14} className="nav-chevron"/>}</button>)}</div>)}</nav>
+  <nav className="nav" aria-label="Navegação do parceiro">{NAV_GROUPS.map(group=><div key={group.label} className="partner-nav-group"><span className="partner-nav-label">{group.label}</span>{group.items.filter(([id])=>(id!=="studio"||studioApps.length>0)&&(!simpleMode||SIMPLE_PARTNER.has(id)||screen===id||id==="portal-sales")).map(([id,name,ico])=><button type="button" className={screen===id?"active":""} aria-current={screen===id?"page":undefined} key={id} data-help-target={({overview:"home", account:"profile", "white-label":"apps", studio:"studio", servers:"servers", codes:"codes", devices:"devices", licenses:"licenses", billing:"billing", notifications:"notifications", help:"help"})[id] || undefined} onClick={()=>navigate(id)}><span className="nav-icon"><Icon name={ico} size={19}/></span><span className="nav-text">{name}</span>{id==="notifications"&&showBadge&&unread>0&&<b className="nav-count">{unread}</b>}{screen===id&&<Icon name="chevronRight" size={14} className="nav-chevron"/>}</button>)}</div>)}</nav>
   <div className="sidefoot"><span className={`side-status-dot ${data.monitorEnabled?"is-on":""}`}/><div><span>Monitoramento</span><b>{data.monitorEnabled?"Ativado":"Desativado"}</b></div></div>
  </aside>
  <section className="main"><div style={{padding:"14px 22px 0"}}><TaskFinder tasks={TASKS.filter(task=>task.route!=="studio"||studioApps.length>0)} onNavigate={navigate} /></div><header className="app-header"><div className="header-left"><button type="button" className="partner-menu" aria-label="Abrir menu" onClick={()=>setMobileMenu(true)}><Icon name="menu" size={21}/></button><div className="page-heading"><div className="eyebrow"><span className="eyebrow-dot"/>{data.servicePlan?.features?.label||"PARCEIRO DE CONTEÚDO"}</div><h1>{SCREEN_TITLES[screen]||"Painel do parceiro"}</h1><p className="page-subtitle">{SCREEN_SUBTITLES[screen]||"Gerencie sua parceria"}</p></div></div><div className="topright"><button type="button" className="easy-mode-button" aria-pressed={!simpleMode} onClick={()=>setSimpleMode(v=>!v)}>{simpleMode?"Modo simples · mostrar tudo":"Modo completo · simplificar"}</button><button type="button" className="header-refresh" data-help-target="context-help" onClick={()=>window.dispatchEvent(new CustomEvent("deltatv-help-context",{detail:{screen}}))}>? Ajuda</button><button type="button" className="header-refresh" onClick={refresh} title="Atualizar informações"><Icon name="refresh" size={18}/><span>Atualizar</span></button><button type="button" className="header-notifications" aria-label={`Notificações${unread?` (${unread} não lidas)`:""}`} onClick={()=>navigate("notifications")}><Icon name="bell" size={19}/>{showBadge&&unread>0&&<span className="notif-dot"/>}</button><div className="profile-wrap"><button type="button" className="profile-trigger" aria-haspopup="menu" aria-expanded={profileMenu} onClick={()=>setProfileMenu(v=>!v)}><span className="avatar">{profileDetails?.profile?.avatarData?<img src={profileDetails.profile.avatarData} className="profile-menu-avatar" alt=""/>:(user.name||user.email||"P")[0].toUpperCase()}</span><span className="profile-identity"><b>{user.name||"Parceiro"}</b><small>Minha conta</small></span><Icon name="chevron" size={16}/></button>{profileMenu&&<><button type="button" className="profile-dismiss" aria-label="Fechar menu da conta" onClick={()=>setProfileMenu(false)}/><div className="profile-popover" role="menu"><div className="profile-popover-title"><b>{user.name||"Parceiro"}</b><span>{user.email||"Conta de parceiro"}</span></div><button role="menuitem" onClick={()=>navigate("account")}><Icon name="account" size={17}/> Meu perfil</button><button role="menuitem" className="logout-item" onClick={signOut}><Icon name="logout" size={17}/> Sair da conta</button></div></>}</div></div></header>
@@ -213,7 +220,13 @@ function PartnerPortalApp(){
  {screen==="notifications"&&<Messages onUnread={setUnread}/>}
  {screen==="access"&&<AccessHistory/>}
  {screen==="billing"&&<BillingHistory/>}
- {screen==="portal-sales"&&canSellPortal&&<PortalSales/>}
+ {screen==="portal-sales"&&(portalAccess.status==='ready'&&portalAccess.registered?<PortalSales canOperate={portalAccess.enabled}/>:<section className="panel" style={{padding:18,display:'grid',gap:12}}>
+   <h2>Minha rede comercial do Painel do Parceiro</h2>
+   <p className="muted">Aqui você poderá convidar novos parceiros, cadastrar Submasters, vender meses de acesso pré-pagos e acompanhar sua árvore de distribuição. Esta área é independente das licenças de TV.</p>
+   {portalAccess.status==='loading'?<p role="status">Verificando autorização comercial…</p>:<div className={portalAccess.status==='error'?'alert':'notice'} role="status">{portalAccess.reason||'Esta conta ainda não possui permissão para distribuir acessos.'}</div>}
+   <p className="muted">A ativação comercial e a concessão excepcional de estoque são exclusivas do Superadmin; você não precisa criar uma conta de Revenda de TV para receber esse recurso.</p>
+   <div><button className="outline" type="button" onClick={()=>void refreshPortalAccess()}>Atualizar autorização</button></div>
+  </section>)}
  {screen==="downloads"&&<AppDownloads/>}
  {screen==="account"&&<PartnerAccount/>}
  {screen==="monitor"&&<><div className="heading"><p>Estado e latência dos servidores da sua parceria. A consulta usa medições já coletadas pelo backend e não gera novas sondagens.</p><button className="outline" onClick={refresh}>Atualizar</button></div><div className="cards">{data.providers.map(s=><article className="servercard" key={s.id}><div className="between"><h3>{s.name}</h3><State health={s.health}/></div><p className="break">{s.baseUrl}</p><div className="two"><span>Latência</span><b>{s.health?.latencyMs!=null?`${s.health.latencyMs} ms`:"Sem medição"}</b></div><div className="two"><span>Disponibilidade HTTP (24h / 7d / 30d)</span><b>{['24h','7d','30d'].map(period => { const sample=s.availability?.[period]; return sample?.percent == null ? `— (${sample?.samples || 0} testes)` : `${sample.percent}% (${sample.samples} testes)`; }).join(' · ')}</b></div><div className="two"><span>Última verificação</span><b>{s.health?.lastCheckedAt?new Date(s.health.lastCheckedAt).toLocaleString("pt-BR"):"—"}</b></div>{s.health?.lastError&&<div className="errorline">{s.health.lastError}</div>}</article>)}{!data.providers.length&&<div className="empty">Nenhum servidor.</div>}</div></>}

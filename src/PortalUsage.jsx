@@ -5,9 +5,13 @@ const gb=x=>Number(x||0).toLocaleString('pt-BR',{maximumFractionDigits:3})+' GB'
 const textKind={live:'TV ao vivo',hls:'Segmentos HLS',movie:'Filmes',series:'Séries',api:'Catálogo/API',epg:'EPG'};
 export default function PortalUsage(){
  const [month,setMonth]=useState(monthNow),[view,setView]=useState(null),[top,setTop]=useState([]),[error,setError]=useState(''),[busy,setBusy]=useState(false);
- const load=useCallback(async()=>{setBusy(true);setError('');try{const query={month};const [v,d]=await Promise.all([
-  api('/content-partner/portal-sales/usage',{query}),api('/content-partner/portal-sales/usage/devices',{query})]);setView(v);setTop(d.items||[]);
- }catch(ex){setError(ex.message)}finally{setBusy(false)}},[month]);
+ const load=useCallback(async()=>{setBusy(true);setError('');try{const query={month};const [reportResult,deviceResult]=await Promise.allSettled([
+  api('/content-partner/portal-sales/usage',{query}),api('/content-partner/portal-sales/usage/devices',{query})]);
+  setView(reportResult.status==='fulfilled'?reportResult.value:null);
+  setTop(deviceResult.status==='fulfilled'?deviceResult.value.items||[]:[]);
+  const failed=[reportResult,deviceResult].filter(r=>r.status==='rejected');
+  if(failed.length)setError(failed.map(r=>r.reason?.message||'Não foi possível consultar o consumo.').join(' | '));
+ }catch(ex){setView(null);setTop([]);setError(ex.message)}finally{setBusy(false)}},[month]);
  useEffect(()=>{void load()},[load]);
  return <section className="panel" style={{padding:18,display:'grid',gap:12}}>
   <h3>Consumo de infraestrutura da minha rede</h3>
