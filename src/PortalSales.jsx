@@ -9,7 +9,7 @@ const Grid=({children})=><div style={{display:'grid',gridTemplateColumns:'repeat
 const Box=({title,sub,children})=><section className="panel" style={{padding:18,display:'grid',gap:12,minWidth:0}}><div><h3>{title}</h3>{sub&&<p className="muted">{sub}</p>}</div>{children}</section>;
 const permissionLabels={canSell:'Vender Pacotes de Serviço',canCreateSubmasters:'Criar Submasters',canTransferStock:'Distribuir estoque',canViewFinance:'Consultar financeiro',canManageGateways:'Configurar gateways'};
 export function MyServicePackage(){
- const [info,setInfo]=useState(null),[error,setError]=useState('');
+ const [info,setInfo]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false);
  useEffect(()=>{api('/content-partner/portal-sales/my-package').then(setInfo).catch(e=>setError(e.message));},[]);
  if(error)return <div className="alert">{error}</div>;
  if(!info)return <div className="panel">Carregando seu Pacote de Serviço…</div>;
@@ -21,6 +21,17 @@ export function MyServicePackage(){
     <div className="stat"><small>Ativações</small><strong>{usage.used} / {usage.limit===null?'Ilimitadas':usage.limit}</strong><span>Ativações atualmente registradas</span></div>
     <div className="stat"><small>Validade do acesso</small><strong>{date(info.expiresAt)}</strong><span>{info.legacy?'Contrato legado preservado':'Prazo contratado'}</span></div></Grid>
    <div><h4>Benefícios atuais</h4>{[['autoFailover','Failover automático'],['autoPriority','Prioridade automática de DNS'],['emailAlerts','Alertas por e-mail'],['detailedHistory','Histórico detalhado']].map(([key,label])=><p key={key} style={{margin:'7px 0'}}>{info.features?.[key]?'✓':'—'} {label}</p>)}</div>
+   {info.pendingPayment&&<div className="notice" style={{display:'grid',gap:8}}>
+    <strong>Pagamento pendente — pacote ainda não ativado</strong>
+    <span>Valor: {money(info.pendingPayment.totalCents)} · {info.pendingPayment.gateway==='manual'?'Pix externo combinado com a DeltaTV':info.pendingPayment.gateway}</span>
+    {info.pendingPayment.checkoutUrl&&<a href={info.pendingPayment.checkoutUrl} target="_blank" rel="noreferrer">Abrir checkout para pagamento</a>}
+    {info.pendingPayment.gateway!=='manual'&&<button className="primary" disabled={busy} onClick={async()=>{setBusy(true);setError('');try{
+     const r=await api('/content-partner/portal-sales/my-package/checkout',{method:'POST',body:{}});
+     setInfo(prev=>({...prev,pendingPayment:{...prev.pendingPayment,checkoutUrl:r.checkout_url||prev.pendingPayment.checkoutUrl}}));
+     if(r.checkout_url)window.open(r.checkout_url,'_blank','noopener,noreferrer');
+    }catch(e){setError(e.message)}finally{setBusy(false)}}}>Gerar link de pagamento</button>}
+    <small>O acesso comercial e os benefícios são liberados somente após o pagamento ser confirmado no backend.</small>
+   </div>}
    {info.legacy&&<p className="notice">{info.note}</p>}
   </Box>
  </div>;

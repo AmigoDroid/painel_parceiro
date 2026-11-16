@@ -86,6 +86,7 @@ function PartnerPortalApp(){
      .catch(e=>setPortalAccess({status:'error',reason:e.message||'Não foi possível consultar a autorização comercial.'}));
  },[]);
  useEffect(()=>{if(!user){setPortalAccess({status:'loading'});return;}void refreshPortalAccess();},[user?.id,refreshPortalAccess]);
+ useEffect(()=>{if(user&&portalAccess.status==='ready'&&portalAccess.paymentPending&&screen!=='package')setScreen('package');},[user?.id,portalAccess.status,portalAccess.paymentPending]);
  useEffect(()=>{if(!user||!portalAccess.enabled){setCommercialPermissions({});return;}let alive=true;
   api('/content-partner/portal-sales/permissions').then(r=>{if(alive)setCommercialPermissions(r.permissions||{})}).catch(()=>{if(alive)setCommercialPermissions({})});
   return()=>{alive=false};},[user?.id,portalAccess.enabled]);
