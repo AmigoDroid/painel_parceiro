@@ -1,169 +1,270 @@
-import {useCallback,useEffect,useState} from 'react';
-import {api} from './api.js';
+import { useCallback, useEffect, useState } from 'react';
+import { api } from './api.js';
 import PortalUsage from './PortalUsage.jsx';
-const money=n=>Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-const cents=n=>Math.round(Number(String(n).replace(',','.'))*100);
-const date=s=>s?new Date(s).toLocaleDateString('pt-BR'):'—';
-const Label=({children})=><label style={{display:'grid',gap:6,fontSize:14}}>{children}</label>;
-const Grid=({children})=><div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,225px),1fr))',gap:12}}>{children}</div>;
-const Box=({title,sub,children})=><section className="panel" style={{padding:18,display:'grid',gap:12,minWidth:0}}><div><h3>{title}</h3>{sub&&<p className="muted">{sub}</p>}</div>{children}</section>;
-const permissionLabels={canSell:'Vender Pacotes de Serviço',canCreateSubmasters:'Criar Submasters',canViewFinance:'Consultar financeiro',canManageGateways:'Configurar gateways'};
-export function MyServicePackage(){
- const [info,setInfo]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false);
- useEffect(()=>{api('/content-partner/portal-sales/my-package').then(setInfo).catch(e=>setError(e.message));},[]);
- if(error)return <div className="alert">{error}</div>;
- if(!info)return <div className="panel">Carregando seu Pacote de Serviço…</div>;
- const p=info.package,usage=info.activations;
- return <div style={{display:'grid',gap:14}}>
-  <Box title={`Meu Pacote de Serviço — ${info.packageName}`} sub="Os recursos abaixo pertencem ao seu acesso ao Painel do Parceiro, não ao painel de Revenda de TV.">
-   <Grid><div className="stat"><small>Meu ID DeltaTV (permanente)</small><strong>{info.publicId||'—'}</strong><button type="button" className="outline" onClick={()=>navigator.clipboard?.writeText(info.publicId||'')}>Copiar ID</button></div>
-    <div className="stat"><small>DNS permitidos por código</small><strong>{info.dns.limit===null?'Ilimitados':info.dns.limit}</strong><span>DNS é a forma de exibição dos servidores/URLs da parceria</span></div>
-    <div className="stat"><small>Ativações</small><strong>{usage.used} / {usage.limit===null?'Ilimitadas':usage.limit}</strong><span>Ativações atualmente registradas</span></div>
-    <div className="stat"><small>Validade do acesso</small><strong>{date(info.expiresAt)}</strong><span>{info.legacy?'Contrato legado preservado':'Prazo contratado'}</span></div></Grid>
-   <div><h4>Benefícios atuais</h4>{[['autoFailover','Failover automático'],['autoPriority','Prioridade automática de DNS'],['emailAlerts','Alertas por e-mail'],['detailedHistory','Histórico detalhado']].map(([key,label])=><p key={key} style={{margin:'7px 0'}}>{info.features?.[key]?'✓':'—'} {label}</p>)}</div>
-   {info.pendingPayment&&<div className="notice" style={{display:'grid',gap:8}}>
-    <strong>Pagamento pendente — pacote ainda não ativado</strong>
-    <span>Valor: {money(info.pendingPayment.totalCents)} · {info.pendingPayment.gateway==='manual'?'Pix externo combinado com a DeltaTV':info.pendingPayment.gateway}</span>
-    {info.pendingPayment.checkoutUrl&&<a href={info.pendingPayment.checkoutUrl} target="_blank" rel="noreferrer">Abrir checkout para pagamento</a>}
-    {info.pendingPayment.gateway!=='manual'&&<button className="primary" disabled={busy} onClick={async()=>{setBusy(true);setError('');try{
-     const r=await api('/content-partner/portal-sales/my-package/checkout',{method:'POST',body:{}});
-     setInfo(prev=>({...prev,pendingPayment:{...prev.pendingPayment,checkoutUrl:r.checkout_url||prev.pendingPayment.checkoutUrl}}));
-     if(r.checkout_url)window.open(r.checkout_url,'_blank','noopener,noreferrer');
-    }catch(e){setError(e.message)}finally{setBusy(false)}}}>Gerar link de pagamento</button>}
-    <small>O acesso comercial e os benefícios são liberados somente após o pagamento ser confirmado no backend.</small>
-   </div>}
-   {info.legacy&&<p className="notice">{info.note}</p>}
-  </Box>
- </div>;
+import './portal-sales.css';
+
+const moneyCents = value => (Number(value || 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const asCents = value => Math.round(Number(String(value || '0').replace(',', '.')) * 100);
+const date = value => value ? new Date(value).toLocaleDateString('pt-BR') : '—';
+const statusLabels = { pending: 'Aguardando', accepted: 'Aceito', expired: 'Expirado', cancelled: 'Cancelado', revoked: 'Cancelado', paid: 'Pago' };
+const permissionLabels = { canSell: 'Vender acessos', canCreateSubmasters: 'Criar Submasters', canViewFinance: 'Ver financeiro', canManageGateways: 'Configurar pagamentos' };
+const permissionColumns = { canSell: 'can_sell', canCreateSubmasters: 'can_create_submasters', canViewFinance: 'can_view_finance', canManageGateways: 'can_manage_gateways' };
+const initialInvite = { invitedName: '', invitedEmail: '', inviteType: 'customer', planCode: '', months: '1', price: '', paymentMode: 'manual' };
+
+async function copyValue(value) {
+  if (!value) return;
+  if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(value);
 }
-export default function PortalSales({canOperate=true}){
- const [tab,setTab]=useState('dashboard'),[data,setData]=useState(null),[perms,setPerms]=useState(null),[tree,setTree]=useState([]),[invitations,setInvitations]=useState([]),[relocations,setRelocations]=useState([]),[gateways,setGateways]=useState(null);
- const [invite,setInvite]=useState({invitedName:'',invitedEmail:'',inviteType:'customer',planCode:'',months:'1',price:'',monthly:'0',paymentMode:'manual'});
- const [relocation,setRelocation]=useState({code:''}),[transferCode,setTransferCode]=useState(null);
- const [gateway,setGateway]=useState({provider:'mercadopago',accessToken:'',handle:'',webhookSecret:'',currentPassword:''});
- const [createdInvite,setCreatedInvite]=useState(null),[error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false);
- const [externalPayment,setExternalPayment]=useState(null);
- const refresh=useCallback(async()=>{
-  const r=await Promise.allSettled([api('/content-partner/portal-sales'),api('/content-partner/portal-sales/permissions'),api('/content-partner/portal-sales/tree'),api('/content-partner/portal-sales/invitations'),api('/content-partner/portal-sales/reparent-requests'),api('/content-partner/portal-sales/packages')]);
-  if(r[0].status==='fulfilled')setData(r[0].value);
-  if(r[1].status==='fulfilled')setPerms(r[1].value);
-  if(r[2].status==='fulfilled')setTree(r[2].value.items||[]);
-  if(r[3].status==='fulfilled')setInvitations(r[3].value.items||[]);
-  if(r[4].status==='fulfilled')setRelocations(r[4].value.items||[]);
-  if(r[5].status==='fulfilled')setAvailablePackages(r[5].value.items||[]);
-  else setAvailablePackages([]);
-  if(r[1].status==='fulfilled'&&r[1].value?.permissions?.canManageGateways){try{setGateways(await api('/content-partner/portal-sales/gateways'))}catch{/* Ignorar falha de gateway sem derrubar a rede */}}
-  if(r[0].status==='rejected')setError(r[0].reason.message||'Erro ao carregar a rede.');
- },[]);
- useEffect(()=>{void refresh();},[refresh]);
- const act=async(path,body,method='POST')=>{setError('');setNotice('');setBusy(true);try{const value=await api(`/content-partner/portal-sales${path}`,{method,body});setNotice('Operação concluída e auditada.');await refresh();return value;}catch(e){setError(e.message||'Não foi possível salvar.');return null;}finally{setBusy(false)}};
- if(!data||!perms)return <div className="panel" style={{padding:18}}>{error||'Carregando sua rede comercial…'}</div>;
- const p=perms.permissions||{},enabled=canOperate&&perms.enabled,children=data.children||[],contracts=data.contracts||[];
- const tabs=[['dashboard','Visão geral'],...(p.canSell?[['sales','Vender acessos']]:[]),['network','Minha rede'],...(p.canManageGateways?[['gateway','Meus gateways']]:[]),...(p.canViewFinance?[['finance','Financeiro']]:[])];
- const allowed= tabs.some(([id])=>id===tab)?tab:'dashboard';
- const accounts=tree.filter(x=>x.depth>0);
- return <div style={{display:'grid',gap:16}}>
-  <header><h2>Minha rede de parceiros</h2><p className="muted">Revenda acessos ao <b>Painel do Parceiro DeltaTV</b>. Cada conta recebe seu Pacote de Serviço. Seu perfil: {data.seller.role==='master'?'Master':'Submaster'}.</p></header>
-  <nav aria-label="Seções comerciais autorizadas" style={{display:'flex',gap:8,flexWrap:'wrap'}}>{tabs.map(([id,label])=><button type="button" key={id} className={allowed===id?'primary':'outline'} onClick={()=>setTab(id)}>{label}</button>)}</nav>
-  {!enabled&&<p className="notice">A distribuição comercial desta conta está suspensa. Consulte a DeltaTV ou seu Master.</p>}
-  {error&&<div role="alert" className="alert">{error}</div>}{notice&&<div role="status" className="notice">{notice}</div>}
-  {allowed==='dashboard'&&<>
-   <Grid><div className="stat"><small>Parceiros diretos</small><strong>{children.length}</strong></div><div className="stat"><small>Integrantes da rede</small><strong>{accounts.length}</strong></div><div className="stat"><small>Clientes diretos</small><strong>{contracts.length}</strong></div><div className="stat"><small>Pacotes disponíveis para venda</small><strong>{availablePackages.length}</strong></div></Grid>
-   <MyServicePackage/>
-   {p.canSell&&<Box title="Começar uma nova venda"><p className="muted">Escolha um Pacote de Serviço, negocie o valor e envie o convite. O acesso depende da confirmação do pagamento, sem estoque comercial.</p><button type="button" className="primary" onClick={()=>setTab('sales')}>Vender Pacote de Serviço</button></Box>}
-  </>}
-  {allowed==='sales'&&p.canSell&&<>
-   <Box title="Convidar novo cliente" sub="O cliente recebe acesso ao painel, sem criar conta no sistema de Revendas de TV. Submasters só podem ser cadastrados com permissão específica.">
-    <form style={{display:'grid',gap:14}} onSubmit={async e=>{e.preventDefault();if(!window.confirm(`Enviar convite de ${invite.months} mês(es) pelo valor combinado?`))return;
-      const result=await act('/invitations',{invitedName:invite.invitedName,invitedEmail:invite.invitedEmail,inviteType:invite.inviteType,planCode:invite.planCode,
-       months:Number(invite.months),unitResaleCents:cents(invite.price),monthlyFeeCents:cents(invite.monthly),paymentMode:invite.paymentMode});if(result)setCreatedInvite(result);}}>
-     <Grid><Label>Nome do responsável<input minLength="2" maxLength="160" required value={invite.invitedName} onChange={e=>setInvite({...invite,invitedName:e.target.value})}/></Label>
-      <Label>E-mail<input type="email" maxLength="200" required value={invite.invitedEmail} onChange={e=>setInvite({...invite,invitedEmail:e.target.value})}/></Label>
-      <Label>Tipo de acesso<select value={invite.inviteType} onChange={e=>setInvite({...invite,inviteType:e.target.value})}><option value="customer">Parceiro — cliente</option>{p.canCreateSubmasters&&<option value="submaster">Submaster — pode revender</option>}</select></Label>
-      <Label>Pacote de Serviço<select required value={invite.planCode} onChange={e=>setInvite({...invite,planCode:e.target.value})}><option value="">Selecionar</option>{availablePackages.map(s=><option key={s.code} value={s.code}>{s.name} · {s.maxDns===null?'DNS ilimitados':`${s.maxDns} DNS`} · {s.activationLimit===null?'Ativações ilimitadas':`${s.activationLimit} ativações`}</option>)}</select></Label>
-      <Label>Meses de acesso<input type="number" min="1" max="120" required value={invite.months} onChange={e=>setInvite({...invite,months:e.target.value})}/></Label>
-      <Label>Valor negociado por mês (R$)<input type="number" min="0" step="0.01" required value={invite.price} onChange={e=>setInvite({...invite,price:e.target.value})}/></Label></Grid>
-     <Label>Como o cliente vai pagar?
-      <select value={invite.paymentMode} onChange={e=>setInvite({...invite,paymentMode:e.target.value})}>
-       <option value="manual">Pagamento externo recebido por mim</option>
-       {p.canManageGateways&&gateways?.defaultGateway&&<option value="gateway">Checkout no meu {gateways.defaultGateway==='infinitepay'?'InfinitePay':'Mercado Pago'}</option>}
-      </select>
-     </Label>
-     <p className="muted">Não há estoque: convites são vinculados ao Pacote de Serviço. O cadastro é liberado somente após confirmação pelo gateway ou confirmação de Pix externo recebido pelo vendedor.</p>
-     <button className="primary" disabled={busy||!enabled}>Criar convite e cobrança</button>
-    </form>
-    {createdInvite&&<div className="notice" style={{display:'grid',gap:8}}><strong>Convite criado</strong>
-     {createdInvite.warning&&<p role="alert">{createdInvite.warning}</p>}
-     <label>Link seguro de cadastro<input readOnly value={createdInvite.link} onFocus={e=>e.target.select()}/></label>
-     <button type="button" className="outline" onClick={()=>navigator.clipboard?.writeText(createdInvite.link)}>Copiar convite</button>
-     {createdInvite.checkoutUrl&&<a target="_blank" rel="noreferrer" href={createdInvite.checkoutUrl}>Abrir checkout do meu gateway</a>}
-     {createdInvite.pixCode&&<><textarea value={createdInvite.pixCode} rows={2} readOnly/><button className="outline" type="button" onClick={()=>navigator.clipboard?.writeText(createdInvite.pixCode)}>Copiar código Pix</button></>}
+function FormField({ label, hint, children }) {
+  return <label className="ps-field"><span>{label}</span>{children}{hint && <small>{hint}</small>}</label>;
+}
+function Panel({ title, description, children, className = '' }) {
+  return <section className={`ps-panel ${className}`}><div className="ps-panel-heading"><h3>{title}</h3>{description && <p>{description}</p>}</div>{children}</section>;
+}
+function EmptyState({ title, description }) {
+  return <div className="ps-empty"><strong>{title}</strong><p>{description}</p></div>;
+}
+function PackageSummary({ item }) {
+  if (!item) return <div className="ps-package-hint">Escolha um Pacote de Serviço para visualizar os benefícios.</div>;
+  return <div className="ps-package-hint"><strong>{item.name}</strong><div className="ps-benefits">
+    <span>{item.maxDns == null ? 'DNS ilimitados' : `${item.maxDns} DNS por código`}</span>
+    <span>{item.activationLimit == null ? 'Ativações ilimitadas' : `${item.activationLimit} ativações`}</span>
+    {item.autoFailover && <span>Failover automático</span>}
+    {item.autoPriority && <span>Prioridade automática</span>}
+  </div></div>;
+}
+
+export function MyServicePackage() {
+  const [info, setInfo] = useState(null);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { let alive = true;
+    api('/content-partner/portal-sales/my-package').then(value => { if (alive) setInfo(value); }).catch(e => { if (alive) setError(e.message); });
+    return () => { alive = false; };
+  }, []);
+  if (error) return <div role="alert" className="alert">{error}</div>;
+  if (!info) return <div className="ps-panel">Carregando seu Pacote de Serviço…</div>;
+  const usage = info.activations || {};
+  return <Panel title={`Meu Pacote de Serviço · ${info.packageName || 'Atual'}`} description="Benefícios e limites do seu próprio acesso ao Painel do Parceiro.">
+    <div className="ps-metrics">
+      <div><small>Meu ID DeltaTV</small><strong>{info.publicId || '—'}</strong><button className="ps-inline-button" type="button" onClick={() => void copyValue(info.publicId)}>Copiar ID</button></div>
+      <div><small>DNS por código</small><strong>{info.dns?.limit == null ? 'Ilimitados' : info.dns.limit}</strong></div>
+      <div><small>Ativações</small><strong>{usage.used ?? 0} / {usage.limit == null ? 'Ilimitadas' : usage.limit}</strong></div>
+      <div><small>Validade do acesso</small><strong>{date(info.expiresAt)}</strong></div>
+    </div>
+    <div className="ps-benefits" aria-label="Benefícios do pacote">{[
+      ['autoFailover', 'Failover'], ['autoPriority', 'Prioridade automática'], ['emailAlerts', 'Alertas por e-mail'], ['detailedHistory', 'Histórico detalhado'],
+    ].filter(([key]) => info.features?.[key]).map(([key, label]) => <span key={key}>✓ {label}</span>)}</div>
+    {info.pendingPayment && <div className="ps-notice"><strong>Seu acesso aguarda confirmação de pagamento</strong>
+      <p>{moneyCents(info.pendingPayment.totalCents)} · {info.pendingPayment.gateway === 'manual' ? 'Pix externo com a DeltaTV' : info.pendingPayment.gateway}</p>
+      {info.pendingPayment.checkoutUrl && <a href={info.pendingPayment.checkoutUrl} target="_blank" rel="noreferrer">Abrir cobrança</a>}
+      {info.pendingPayment.gateway !== 'manual' && <button type="button" className="primary" disabled={busy} onClick={async () => { setBusy(true); try {
+        const result = await api('/content-partner/portal-sales/my-package/checkout', { method: 'POST', body: {} });
+        setInfo(prev => ({ ...prev, pendingPayment: { ...prev.pendingPayment, checkoutUrl: result.checkout_url || prev.pendingPayment.checkoutUrl } }));
+        if (result.checkout_url) window.open(result.checkout_url, '_blank', 'noopener,noreferrer');
+      } catch (e) { setError(e.message); } finally { setBusy(false); } }}>Gerar cobrança</button>}
+      <small>Os benefícios comerciais são liberados somente após a confirmação pela DeltaTV ou pelo provedor.</small>
     </div>}
-   </Box>
-   <Box title="Convites e pagamentos"><div style={{overflowX:'auto'}}><table style={{width:'100%'}}><thead><tr><th>Convidado</th><th>Pacote</th><th>Meses</th><th>Situação</th><th>Validade</th><th></th></tr></thead><tbody>{invitations.map(i=><tr key={i.id}><td>{i.invited_email}</td><td>{i.plan_code}</td><td>{i.months}</td><td>{i.payment_status==='paid'?'Pagamento confirmado':i.payment_gateway==='manual'?'Pix externo pendente':'Aguardando gateway'} · {i.status}</td><td>{date(i.expires_at)}</td><td><div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-    {i.status==='pending'&&i.payment_gateway==='manual'&&i.payment_status!=='paid'&&p.canViewFinance&&<button type="button" className="outline" disabled={busy} onClick={()=>setExternalPayment({id:i.id,email:i.invited_email,reference:'',password:'',received:false})}>Confirmar Pix recebido</button>}
-    {i.status==='pending'&&i.payment_gateway!=='manual'&&i.payment_status!=='paid'&&<>
-      {i.checkout_url?<a href={i.checkout_url} target="_blank" rel="noreferrer">Pagar</a>:<button type="button" className="outline" disabled={busy} onClick={()=>void act(`/invitations/${i.id}/checkout`,{})}>Gerar checkout</button>}
-      <button type="button" className="outline" disabled={busy} onClick={()=>{const transactionNsu=i.payment_gateway==='infinitepay'?window.prompt('transaction_nsu retornado pela InfinitePay'):undefined;const slug=i.payment_gateway==='infinitepay'?window.prompt('slug da InfinitePay'):undefined;if(i.payment_gateway==='infinitepay'&&(!transactionNsu||!slug))return;void act(`/invitations/${i.id}/recheck`,{...(transactionNsu?{transactionNsu,slug}:{})});}}>Conferir pagamento</button>
-    </>}
-    {i.status==='pending'&&i.payment_status!=='paid'&&<button className="outline" disabled={busy} onClick={()=>{if(window.confirm('Cancelar este convite?'))void act(`/invitations/${i.id}/revoke`,{});}}>Cancelar</button>}
-   </div></td></tr>)}</tbody></table></div>
-    {externalPayment&&<form className="panel" style={{padding:14,display:'grid',gap:8}} onSubmit={async e=>{e.preventDefault();if(!externalPayment.received)return;const result=await act(`/invitations/${externalPayment.id}/confirm-external`,{reference:externalPayment.reference,currentPassword:externalPayment.password,confirmReceived:true});if(result)setExternalPayment(null);}}>
-      <strong>Confirmar Pix externo recebido</strong><p className="muted">Convidado: {externalPayment.email}. Confira o crédito no extrato bancário. Comprovante enviado pelo cliente não basta.</p>
-      <Label>Referência bancária<input required minLength={6} maxLength={120} value={externalPayment.reference} onChange={e=>setExternalPayment(v=>({...v,reference:e.target.value}))}/></Label>
-      <Label>Sua senha do Painel do Parceiro<input required type="password" autoComplete="current-password" value={externalPayment.password} onChange={e=>setExternalPayment(v=>({...v,password:e.target.value}))}/></Label>
-      <label><input type="checkbox" required checked={externalPayment.received} onChange={e=>setExternalPayment(v=>({...v,received:e.target.checked}))}/> Confirmo que o valor entrou na minha conta.</label>
-      <div style={{display:'flex',gap:8}}><button type="submit" className="primary" disabled={busy||!externalPayment.received}>Registrar recebimento</button><button type="button" className="outline" onClick={()=>setExternalPayment(null)}>Cancelar</button></div>
+    {info.legacy && info.note && <p className="ps-muted">{info.note}</p>}
+  </Panel>;
+}
+
+function SalesForm({ packages, permissions, gateways, busy, enabled, onSave, created, onClear }) {
+  const [form, setForm] = useState(initialInvite);
+  const selected = packages.find(p => p.code === form.planCode);
+  const total = asCents(form.price) * Number(form.months || 0);
+  const canUseGateway = Boolean(permissions.canManageGateways && gateways?.defaultGateway);
+  const canUseManual = Boolean(permissions.canViewFinance);
+  useEffect(() => { if (!canUseManual && canUseGateway) setForm(value => value.paymentMode === 'manual' ? { ...value, paymentMode: 'gateway' } : value); }, [canUseManual, canUseGateway]);
+  const submit = async event => {
+    event.preventDefault();
+    const months = Number(form.months);
+    const unitResaleCents = asCents(form.price);
+    if (!selected || !Number.isInteger(months) || months < 1 || months > 120 || !Number.isFinite(unitResaleCents) || unitResaleCents < 0) return;
+    if (selected.minResaleCents != null && unitResaleCents < Number(selected.minResaleCents)) return;
+    if (!window.confirm(`Criar convite de ${months} mês(es) por ${moneyCents(unitResaleCents * months)}?`)) return;
+    const result = await onSave('/invitations', {
+      invitedName: form.invitedName.trim(), invitedEmail: form.invitedEmail.trim(), inviteType: form.inviteType,
+      planCode: form.planCode, months, unitResaleCents, monthlyFeeCents: 0, paymentMode: form.paymentMode,
+    });
+    if (result) setForm(initialInvite);
+  };
+  return <div className="ps-sales-columns">
+    <Panel title="Nova venda" description="Preencha os dados, escolha o pacote e envie o convite. Sem estoque, créditos ou cadastros paralelos.">
+      <form className="ps-form" onSubmit={submit}>
+        <div className="ps-step-label">1 · Quem vai receber o acesso?</div>
+        <div className="ps-form-grid"><FormField label="Nome ou empresa"><input required minLength={2} maxLength={160} autoComplete="off" value={form.invitedName} onChange={e => setForm(f => ({ ...f, invitedName: e.target.value }))} placeholder="Nome do comprador" /></FormField>
+          <FormField label="E-mail"><input required type="email" maxLength={200} value={form.invitedEmail} onChange={e => setForm(f => ({ ...f, invitedEmail: e.target.value }))} placeholder="cliente@empresa.com" /></FormField></div>
+        <FormField label="Tipo de conta"><select value={form.inviteType} onChange={e => setForm(f => ({ ...f, inviteType: e.target.value }))}><option value="customer">Parceiro — utiliza o painel</option>{permissions.canCreateSubmasters && <option value="submaster">Submaster — pode formar rede se autorizado</option>}</select></FormField>
+        <div className="ps-step-label">2 · O que será contratado?</div>
+        <FormField label="Pacote de Serviço"><select required value={form.planCode} onChange={e => setForm(f => ({ ...f, planCode: e.target.value }))}><option value="">Selecione o pacote</option>{packages.map(item => <option key={item.code} value={item.code}>{item.name}</option>)}</select></FormField>
+        <PackageSummary item={selected} />
+        <div className="ps-form-grid"><FormField label="Valor negociado por mês (R$)"><input type="number" inputMode="decimal" required min="0" step="0.01" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="0,00" /></FormField>
+          <FormField label="Duração (meses)"><input type="number" required min="1" max="120" value={form.months} onChange={e => setForm(f => ({ ...f, months: e.target.value }))} /></FormField></div>
+        {selected?.minResaleCents != null && asCents(form.price) < Number(selected.minResaleCents) && form.price !== '' && <p role="alert" className="ps-error">Este pacote exige valor mínimo de {moneyCents(selected.minResaleCents)} por mês.</p>}
+        <div className="ps-step-label">3 · Como será o pagamento?</div>
+        <div className="ps-payment-options">
+          {canUseManual && <label className={form.paymentMode === 'manual' ? 'selected' : ''}><input type="radio" name="sale-payment" checked={form.paymentMode === 'manual'} onChange={() => setForm(f => ({ ...f, paymentMode: 'manual' }))} /><span><strong>Pix externo</strong><small>Você confirma somente depois de receber.</small></span></label>}
+          {canUseGateway && <label className={form.paymentMode === 'gateway' ? 'selected' : ''}><input type="radio" name="sale-payment" checked={form.paymentMode === 'gateway'} onChange={() => setForm(f => ({ ...f, paymentMode: 'gateway' }))} /><span><strong>Pagamento online</strong><small>{gateways.defaultGateway === 'infinitepay' ? 'InfinitePay' : 'Mercado Pago'} na sua própria conta.</small></span></label>}
+        </div>
+        {!canUseManual && !canUseGateway && <p role="alert" className="ps-error">Você não tem permissão para confirmar Pix externo nem um gateway próprio disponível. Solicite autorização ao Master responsável.</p>}
+        <div className="ps-checkout-summary"><span>Total negociado</span><strong>{Number.isFinite(total) && total >= 0 ? moneyCents(total) : '—'}</strong></div>
+        <button className="primary ps-submit" disabled={busy || !enabled || !selected || !form.invitedEmail || !form.invitedName || !form.price || (!canUseManual && !canUseGateway) || (form.paymentMode === 'manual' && !canUseManual) || (form.paymentMode === 'gateway' && !canUseGateway) || (selected?.minResaleCents != null && asCents(form.price) < Number(selected.minResaleCents))}>{busy ? 'Gerando convite…' : 'Criar convite de acesso'}</button>
+        <small className="ps-muted">O cliente só poderá concluir o cadastro depois da confirmação do pagamento. A venda não gera estoque de licenças.</small>
+      </form>
+      {created && <div className="ps-success" role="status"><div className="ps-success-head"><strong>Convite gerado</strong><button type="button" className="ps-inline-button" onClick={onClear}>Fechar</button></div>
+        {created.warning && <p>{created.warning}</p>}
+        <input aria-label="Link de cadastro" readOnly value={created.link || ''} onFocus={e => e.target.select()} />
+        <div className="ps-actions"><button className="outline" type="button" onClick={() => void copyValue(created.link)}>Copiar convite</button>{created.checkoutUrl && <a className="ps-action-link" href={created.checkoutUrl} target="_blank" rel="noreferrer">Abrir pagamento</a>}</div>
+      </div>}
+    </Panel>
+    <aside className="ps-sale-aside"><div className="ps-side-panel"><strong>Venda simplificada</strong><p>1. Identifique o cliente.</p><p>2. Escolha o pacote e o valor.</p><p>3. Envie o convite.</p><hr /><small>DNS, ativações e benefícios são aplicados pelo Pacote de Serviço. Não há estoque de meses para distribuir.</small></div></aside>
+  </div>;
+}
+
+function Invitations({ invitations, busy, canConfirmExternal, onAction }) {
+  const [search, setSearch] = useState('');
+  const [payment, setPayment] = useState(null);
+  const filtered = invitations.filter(item => `${item.invited_name || ''} ${item.invited_email} ${item.plan_code}`.toLowerCase().includes(search.toLowerCase()));
+  return <Panel title="Convites e pagamentos" description="Acompanhe os cadastros e confirme recebimentos externos somente após conferir seu extrato.">
+    <input aria-label="Buscar convites" className="ps-search" placeholder="Buscar por cliente, e-mail ou pacote" value={search} onChange={e => setSearch(e.target.value)} />
+    {!filtered.length ? <EmptyState title="Nenhum convite encontrado" description="Quando você fizer uma venda, ela aparecerá aqui." /> : <div className="ps-invite-list">{filtered.map(item => {
+      const pending = item.status === 'pending' && item.payment_status !== 'paid';
+      const manual = item.payment_gateway === 'manual';
+      return <article key={item.id} className="ps-invite-row"><div className="ps-invite-main"><strong>{item.invited_name || item.invited_email}</strong><span>{item.invited_email}</span><small>{item.plan_code} · {item.months} {item.months === 1 ? 'mês' : 'meses'} · vence {date(item.expires_at)}</small></div>
+        <div className="ps-invite-meta"><span className={`ps-status ${item.payment_status === 'paid' ? 'is-paid' : pending ? 'is-pending' : ''}`}>{item.payment_status === 'paid' ? 'Pagamento confirmado' : pending ? (manual ? 'Aguardando Pix externo' : 'Aguardando gateway') : statusLabels[item.status] || item.status}</span>
+          <div className="ps-actions">{pending && manual && canConfirmExternal && <button type="button" className="outline" disabled={busy} onClick={() => setPayment({ id: item.id, email: item.invited_email, reference: '', password: '', received: false })}>Confirmar Pix recebido</button>}
+            {pending && !manual && (item.checkout_url ? <a href={item.checkout_url} target="_blank" rel="noreferrer">Abrir checkout</a> : <button type="button" className="outline" disabled={busy} onClick={() => void onAction(`/invitations/${item.id}/checkout`, {})}>Gerar checkout</button>)}
+            {pending && !manual && <button type="button" className="outline" disabled={busy} onClick={() => { const transactionNsu = item.payment_gateway === 'infinitepay' ? window.prompt('transaction_nsu da InfinitePay') : undefined; const slug = item.payment_gateway === 'infinitepay' ? window.prompt('slug da InfinitePay') : undefined; if (item.payment_gateway === 'infinitepay' && (!transactionNsu || !slug)) return; void onAction(`/invitations/${item.id}/recheck`, { ...(transactionNsu ? { transactionNsu, slug } : {}) }); }}>Conferir</button>}
+            {pending && <button type="button" className="ps-danger-link" disabled={busy} onClick={() => { if (window.confirm('Cancelar este convite?')) void onAction(`/invitations/${item.id}/revoke`, {}); }}>Cancelar</button>}
+          </div></div></article>;
+    })}</div>}
+    {payment && <form className="ps-external-confirm" onSubmit={async event => { event.preventDefault(); if (!payment.received) return; const result = await onAction(`/invitations/${payment.id}/confirm-external`, { reference: payment.reference.trim(), currentPassword: payment.password, confirmReceived: true }); if (result) setPayment(null); }}>
+      <h4>Confirmar pagamento externo</h4><p>Cliente: {payment.email}. Verifique o crédito no extrato bancário, não apenas o comprovante.</p>
+      <FormField label="Referência bancária"><input required minLength={6} maxLength={120} value={payment.reference} onChange={e => setPayment(v => ({ ...v, reference: e.target.value }))} /></FormField>
+      <FormField label="Sua senha do painel"><input type="password" required autoComplete="current-password" value={payment.password} onChange={e => setPayment(v => ({ ...v, password: e.target.value }))} /></FormField>
+      <label className="ps-checkbox"><input type="checkbox" required checked={payment.received} onChange={e => setPayment(v => ({ ...v, received: e.target.checked }))} />Confirmo o recebimento na minha conta</label>
+      <div className="ps-actions"><button className="primary" disabled={busy || !payment.received}>Confirmar pagamento</button><button type="button" className="outline" onClick={() => setPayment(null)}>Voltar</button></div>
     </form>}
-   </Box>
-  </>}
-  {allowed==='network'&&<>
-   <Box title="Integrantes da minha rede" sub="Você administra os Submasters diretos; todos os níveis descendentes são mostrados para acompanhamento.">
-    <div style={{overflowX:'auto'}}><table style={{width:'100%'}}><thead><tr><th>Integrante</th><th>Perfil</th><th>Clientes</th></tr></thead><tbody>{tree.map(s=><tr key={s.partner_id}><td><span style={{paddingLeft:Math.min(s.depth,10)*14}}>{s.depth?'↳ ':''}{s.name}</span></td><td>{s.role==='master'?'Master':'Submaster'}</td><td>{s.direct_customers}</td></tr>)}</tbody></table></div>
-   </Box>
-   {p.canCreateSubmasters&&<Box title="Permissões dos meus Submasters" sub="Uma função desautorizada desaparece do menu do Submaster. A API também impede seu uso.">
-     {children.map(s=><div className="panel" key={s.partner_id} style={{padding:12}}><b>{s.name}</b><div style={{display:'flex',gap:12,flexWrap:'wrap',marginTop:8}}>{Object.entries(permissionLabels).filter(([key])=>p[key]).map(([key,label])=><label key={key}><input type="checkbox" checked={Boolean(s[({canSell:'can_sell',canCreateSubmasters:'can_create_submasters',canViewFinance:'can_view_finance',canManageGateways:'can_manage_gateways'})[key]])} disabled={busy} onChange={e=>void act(`/submasters/${s.partner_id}/permissions`,{[key]:e.target.checked},'PATCH')}/> {label}</label>)}</div></div>)}
-    </Box>}
-   <Box title="Transferência de Submaster" sub="Sem códigos internos: o Submaster autoriza o recebimento com código temporário; o novo Master solicita; o Submaster confirma. A DeltaTV acompanha toda a rede.">
-    {data.seller.role==='submaster'&&<>
-      <button type="button" className="outline" disabled={busy} onClick={async()=>{const result=await act('/reparent-code',{});if(result)setTransferCode(result);}}>Gerar meu código de transferência</button>
-      {transferCode&&<div className="notice" style={{overflowWrap:'anywhere'}}><b>Código válido até {date(transferCode.expiresAt)}</b><p>{transferCode.code}</p><button type="button" className="outline" onClick={()=>navigator.clipboard?.writeText(transferCode.code)}>Copiar código</button></div>}
-    </>}
-    {p.canCreateSubmasters&&<form onSubmit={e=>{e.preventDefault();void act('/reparent-requests/code',{code:relocation.code});}} style={{display:'grid',gap:8}}><Label>Código recebido do Submaster<input required minLength={20} value={relocation.code} onChange={e=>setRelocation({code:e.target.value})}/></Label><button className="outline" disabled={busy}>Solicitar recebimento do Submaster</button></form>}
-    {relocations.filter(x=>x.status==='pending').map(x=><div key={x.id} className="notice"><p>{x.subject_name} → {x.destination_name}</p><small>Solicitação de {date(x.created_at)}</small>{x.requested_by!==data.seller.partnerId&&<div style={{display:'flex',gap:8}}>{[true,false].map(accept=><button key={String(accept)} type="button" className="outline" onClick={()=>{if(window.confirm(accept?'Confirmar transferência de rede?':'Recusar transferência?'))void act(`/reparent-requests/${x.id}/decision`,{accept});}}>{accept?'Aceitar':'Recusar'}</button>)}</div>}</div>)}
-   </Box>
-   <Box title="Clientes do meu ramo direto">{contracts.map(c=><p key={c.id}>{c.customer_name} · {c.plan_code} · vence {date(c.expires_at)}</p>)}{!contracts.length&&<p className="muted">Ainda não há clientes vinculados.</p>}</Box>
-  </>}
-  {allowed==='gateway'&&p.canManageGateways&&<>
-   <Box title="Meus gateways" sub="Os pagamentos das suas vendas devem cair na sua própria conta, separada da DeltaTV.">
-    <button className="outline" onClick={async()=>{try{setGateways(await api('/content-partner/portal-sales/gateways'))}catch(e){setError(e.message)}}}>Consultar configurações atuais</button>
-    {gateways&&<div>{gateways.providers.map(g=><p key={g.provider}>{g.provider} · {g.account_ref||'Conta identificada'} · {g.active?'Ativo':'Desativado'} <button className="outline" disabled={busy} onClick={()=>void act('/gateways/default',{provider:g.provider},'PUT')}>Definir padrão</button></p>)}<small>Gateway padrão: {gateways.defaultGateway||'Ainda não configurado'}</small><div className="notice" style={{display:'grid',gap:6,marginTop:10}}><strong>Webhooks para minhas vendas</strong>
-     <small>Mercado Pago: cadastre o endereço abaixo no painel do Mercado Pago e configure seu segredo acima.</small>
-     <input aria-label="Webhook Mercado Pago" readOnly value={gateways.webhookUrls?.mercadopago||''} onFocus={e=>e.target.select()}/>
-     <button type="button" className="outline" onClick={()=>navigator.clipboard?.writeText(gateways.webhookUrls?.mercadopago||'')}>Copiar webhook Mercado Pago</button>
-     <small>InfinitePay: o endereço abaixo é enviado automaticamente na criação do checkout.</small>
-     <input aria-label="Webhook InfinitePay" readOnly value={gateways.webhookUrls?.infinitepay||''} onFocus={e=>e.target.select()}/>
-     </div></div>}
-    <form style={{display:'grid',gap:12}} onSubmit={async e=>{e.preventDefault();const result=await act('/gateways',{provider:gateway.provider,accessToken:gateway.accessToken,handle:gateway.handle||undefined,webhookSecret:gateway.webhookSecret||undefined,currentPassword:gateway.currentPassword},'PUT');if(result){setGateway({...gateway,accessToken:'',webhookSecret:'',currentPassword:''});setNotice('Credencial salva de forma protegida. Teste uma cobrança real antes de ativar vendas automáticas.');}}}>
-     <Grid><Label>Provedor<select value={gateway.provider} onChange={e=>setGateway({...gateway,provider:e.target.value})}><option value="mercadopago">Mercado Pago</option><option value="infinitepay">InfinitePay</option></select></Label>
-      {gateway.provider==='infinitepay'&&<Label>Minha InfiniteTag<input required value={gateway.handle} onChange={e=>setGateway({...gateway,handle:e.target.value})}/></Label>}
-      <Label>{gateway.provider==='mercadopago'?'Access Token':'Chave API'}<input type="password" required minLength={12} autoComplete="off" value={gateway.accessToken} onChange={e=>setGateway({...gateway,accessToken:e.target.value})}/></Label>
-      {gateway.provider==='mercadopago'&&<Label>Segredo de webhook<input type="password" value={gateway.webhookSecret} onChange={e=>setGateway({...gateway,webhookSecret:e.target.value})}/></Label>}
-      <Label>Confirme sua senha do painel<input type="password" required value={gateway.currentPassword} onChange={e=>setGateway({...gateway,currentPassword:e.target.value})}/></Label></Grid>
-     <button className="primary" disabled={busy||!enabled}>Salvar credenciais</button>
-    </form>
-    <p className="muted">As cobranças de clientes usam seu gateway próprio e são verificadas no provedor. A InfinitePay exige transaction_nsu e slug quando for necessário conferir o pagamento manualmente. Teste uma compra real de baixo valor antes de oferecer o serviço.</p>
-   </Box>
-  </>}
-  {allowed==='finance'&&p.canViewFinance&&<><Box title="Meus recebimentos e compras"><p className="muted">A DeltaTV controla o que você adquiriu; o preço negociado com seus clientes é declarado separadamente.</p><div style={{overflowX:'auto'}}><table style={{width:'100%'}}><thead><tr><th>Pacote</th><th>Meses</th><th>Valor</th><th>Estado</th><th>Checkout</th></tr></thead><tbody>{(data.orders||[]).map(o=><tr key={o.id}><td>{o.plan_code}</td><td>{o.quantity_months}</td><td>{money(o.total_cents)}</td><td>{o.status}</td><td>{o.status==='pending'&&<div style={{display:'grid',gap:6}}>
-   {o.checkout_url?<a href={o.checkout_url} target="_blank" rel="noreferrer">Pagar pelo gateway DeltaTV</a>:o.payment_gateway!=='manual'?
-   <button type="button" className="outline" disabled={busy} onClick={()=>void act(`/orders/${o.id}/checkout`,{})}>Gerar link de pagamento</button>:<small>Pix externo — confirmar com a DeltaTV</small>}
-   {!o.checkout_url&&!o.pix_copy_paste&&!o.payment_expires_at&&<div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-     <button type="button" className="outline" disabled={busy} onClick={()=>void act(`/orders/${o.id}/payment-method`,{mode:'default'})}>Pagar pelo painel</button>
-     <button type="button" className="outline" disabled={busy} onClick={()=>void act(`/orders/${o.id}/payment-method`,{mode:'manual'})}>Pix externo</button>
-   </div>}
-   {o.pix_copy_paste&&<><textarea value={o.pix_copy_paste} readOnly rows={2}/><button type="button" className="outline" onClick={()=>navigator.clipboard?.writeText(o.pix_copy_paste)}>Copiar Pix</button></>}
-   {o.payment_gateway==='infinitepay'&&<button type="button" className="outline" onClick={()=>{const transactionNsu=window.prompt('transaction_nsu da InfinitePay:');const slug=window.prompt('slug da InfinitePay:');if(transactionNsu&&slug)void act(`/orders/${o.id}/confirm-return`,{transactionNsu,slug});}}>Já paguei — conferir</button>}
-   </div>}{o.status!=='pending'?'—':null}</td></tr>)}</tbody></table></div></Box><PortalUsage/></>}
- </div>;
+  </Panel>;
+}
+
+function Network({ data, tree, permissions, relocations, busy, onAction }) {
+  const [code, setCode] = useState('');
+  const [transferCode, setTransferCode] = useState(null);
+  const descendants = tree.filter(item => item.depth > 0);
+  return <div className="ps-stack">
+    <Panel title="Integrantes da minha rede" description="Seus Submasters e descendentes, organizados por nível.">
+      {descendants.length ? <div className="ps-network-list">{descendants.map(item => <div key={item.partner_id} className="ps-network-item" style={{ '--depth': Math.min(item.depth || 0, 8) }}><span>{item.name}</span><small>{item.role === 'master' ? 'Master' : 'Submaster'} · {item.direct_customers} cliente(s)</small></div>)}</div> : <EmptyState title="Sua rede ainda está vazia" description="Quando você cadastrar um Submaster, ele aparecerá aqui." />}
+    </Panel>
+    {permissions.canCreateSubmasters && <Panel title="Permissões dos Submasters diretos" description="Somente opções autorizadas são exibidas a cada integrante.">
+      {!data.children?.length && <EmptyState title="Nenhum Submaster direto" description="Cadastre um Submaster pela área Vender acesso." />}
+      {(data.children || []).map(child => <div className="ps-permission-row" key={child.partner_id}><strong>{child.name}</strong><div className="ps-permission-options">{Object.entries(permissionLabels).filter(([key]) => permissions[key]).map(([key, label]) => <label className="ps-checkbox" key={key}><input type="checkbox" checked={Boolean(child[permissionColumns[key]])} disabled={busy} onChange={event => void onAction(`/submasters/${child.partner_id}/permissions`, { [key]: event.target.checked }, 'PATCH')} />{label}</label>)}</div></div>)}
+    </Panel>}
+    <Panel title="Transferir Submaster" description="A transferência só acontece mediante consentimento, com código temporário.">
+      <details className="ps-details"><summary>Solicitar ou autorizar transferência</summary><div className="ps-stack">
+        {data.seller.role === 'submaster' && <><button className="outline" disabled={busy} onClick={async () => { const result = await onAction('/reparent-code', {}); if (result) setTransferCode(result); }}>Gerar meu código de transferência</button>{transferCode && <div className="ps-notice"><strong>Código válido até {date(transferCode.expiresAt)}</strong><p className="ps-break">{transferCode.code}</p><button type="button" className="outline" onClick={() => void copyValue(transferCode.code)}>Copiar</button></div>}</>}
+        {permissions.canCreateSubmasters && <form className="ps-form" onSubmit={event => { event.preventDefault(); void onAction('/reparent-requests/code', { code }); }}><FormField label="Código fornecido pelo Submaster"><input required minLength={20} value={code} onChange={e => setCode(e.target.value)} /></FormField><button className="outline" disabled={busy}>Solicitar transferência</button></form>}
+        {relocations.filter(item => item.status === 'pending').map(item => <div className="ps-notice" key={item.id}><strong>{item.subject_name} → {item.destination_name}</strong><p>Solicitada em {date(item.created_at)}</p>{item.requested_by !== data.seller.partnerId && <div className="ps-actions"><button className="outline" disabled={busy} onClick={() => { if (window.confirm('Autorizar transferência?')) void onAction(`/reparent-requests/${item.id}/decision`, { accept: true }); }}>Aceitar</button><button className="outline" disabled={busy} onClick={() => { if (window.confirm('Recusar transferência?')) void onAction(`/reparent-requests/${item.id}/decision`, { accept: false }); }}>Recusar</button></div>}</div>)}
+      </div></details>
+    </Panel>
+  </div>;
+}
+
+function GatewaySettings({ settings, busy, onAction }) {
+  const [form, setForm] = useState({ provider: 'mercadopago', handle: '', accessToken: '', webhookSecret: '', currentPassword: '' });
+  const [error, setError] = useState('');
+  return <Panel title="Receber pelas minhas vendas" description="Conecte o Mercado Pago ou InfinitePay da sua empresa. O dinheiro não passa pela DeltaTV.">
+    {settings && <div className="ps-gateway-cards">{settings.providers?.map(item => <div key={item.provider} className="ps-gateway-card"><strong>{item.provider === 'infinitepay' ? 'InfinitePay' : 'Mercado Pago'}</strong><span>{item.active ? 'Conectado' : 'Desativado'}{item.account_ref ? ` · ${item.account_ref}` : ''}</span><button type="button" className="outline" disabled={busy || !item.active || item.provider === settings.defaultGateway} onClick={() => void onAction('/gateways/default', { provider: item.provider }, 'PUT')}>{item.provider === settings.defaultGateway ? 'Padrão atual' : 'Usar como padrão'}</button></div>)}</div>}
+    <details className="ps-details" open={!settings?.providers?.some(item => item.active)}><summary>Adicionar ou atualizar gateway</summary>
+      <form className="ps-form" onSubmit={async event => { event.preventDefault(); setError(''); const result = await onAction('/gateways', { provider: form.provider, accessToken: form.accessToken, ...(form.provider === 'infinitepay' ? { handle: form.handle } : { webhookSecret: form.webhookSecret }), currentPassword: form.currentPassword }, 'PUT'); if (result) setForm(old => ({ ...old, accessToken: '', webhookSecret: '', currentPassword: '' })); }}>
+        <FormField label="Gateway"><select value={form.provider} onChange={e => setForm(v => ({ ...v, provider: e.target.value }))}><option value="mercadopago">Mercado Pago</option><option value="infinitepay">InfinitePay</option></select></FormField>
+        {form.provider === 'infinitepay' && <FormField label="InfiniteTag"><input required value={form.handle} onChange={e => setForm(v => ({ ...v, handle: e.target.value }))} /></FormField>}
+        <FormField label={form.provider === 'infinitepay' ? 'Chave API' : 'Access Token'}><input type="password" autoComplete="off" required minLength={12} value={form.accessToken} onChange={e => setForm(v => ({ ...v, accessToken: e.target.value }))} /></FormField>
+        {form.provider === 'mercadopago' && <FormField label="Segredo do webhook"><input type="password" value={form.webhookSecret} onChange={e => setForm(v => ({ ...v, webhookSecret: e.target.value }))} /></FormField>}
+        <FormField label="Sua senha atual"><input type="password" required autoComplete="current-password" value={form.currentPassword} onChange={e => setForm(v => ({ ...v, currentPassword: e.target.value }))} /></FormField>
+        {error && <p role="alert" className="ps-error">{error}</p>}
+        <button className="primary" disabled={busy}>Salvar gateway</button>
+      </form>
+    </details>
+    {settings?.webhookUrls && <details className="ps-details"><summary>URLs de webhook</summary><div className="ps-stack"><FormField label="Mercado Pago"><input readOnly value={settings.webhookUrls.mercadopago || ''} onFocus={e => e.target.select()} /></FormField><button type="button" className="outline" onClick={() => void copyValue(settings.webhookUrls.mercadopago)}>Copiar</button><FormField label="InfinitePay"><input readOnly value={settings.webhookUrls.infinitepay || ''} onFocus={e => e.target.select()} /></FormField><small>O checkout InfinitePay recebe o webhook automaticamente.</small></div></details>}
+  </Panel>;
+}
+
+function Finance({ orders, busy, onAction }) {
+  return <div className="ps-stack"><Panel title="Minhas compras à DeltaTV" description="Acompanhe cobranças do seu próprio acesso. Seus clientes pagam diretamente a você.">
+    {orders?.length ? <div className="ps-invite-list">{orders.map(item => <article className="ps-invite-row" key={item.id}><div className="ps-invite-main"><strong>{item.plan_code}</strong><span>{item.quantity_months} mês(es) · {moneyCents(item.total_cents)}</span><small>{statusLabels[item.status] || item.status}</small></div>{item.status === 'pending' && <div className="ps-invite-meta"><div className="ps-actions">
+      {item.checkout_url ? <a href={item.checkout_url} target="_blank" rel="noreferrer">Pagar pelo painel</a> : item.payment_gateway !== 'manual' ? <button type="button" className="outline" disabled={busy} onClick={() => void onAction(`/orders/${item.id}/checkout`, {})}>Gerar checkout</button> : <span className="ps-muted">Pix externo com a DeltaTV</span>}
+      {!item.checkout_url && !item.pix_copy_paste && !item.payment_expires_at && <><button type="button" className="outline" disabled={busy} onClick={() => void onAction(`/orders/${item.id}/payment-method`, { mode: 'default' })}>Pagamento online</button><button type="button" className="outline" disabled={busy} onClick={() => void onAction(`/orders/${item.id}/payment-method`, { mode: 'manual' })}>Pix externo</button></>}
+      {item.payment_gateway === 'infinitepay' && <button type="button" className="outline" onClick={() => { const transactionNsu = window.prompt('transaction_nsu da InfinitePay:'); const slug = window.prompt('slug da InfinitePay:'); if (transactionNsu && slug) void onAction(`/orders/${item.id}/confirm-return`, { transactionNsu, slug }); }}>Conferir pagamento</button>}
+    </div></div>}</article>)}</div> : <EmptyState title="Sem cobranças registradas" description="As cobranças da DeltaTV aparecerão aqui quando existirem." />}
+  </Panel><details className="ps-details"><summary>Consumo e relatórios da minha rede</summary><PortalUsage /></details></div>;
+}
+
+export default function PortalSales({ canOperate = true }) {
+  const [tab, setTab] = useState('overview');
+  const [data, setData] = useState(null);
+  const [perms, setPerms] = useState(null);
+  const [tree, setTree] = useState([]);
+  const [invitations, setInvitations] = useState([]);
+  const [relocations, setRelocations] = useState([]);
+  const [packages, setPackages] = useState([]);
+  const [gateways, setGateways] = useState(null);
+  const [createdInvite, setCreatedInvite] = useState(null);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [busy, setBusy] = useState(false);
+  const refresh = useCallback(async () => {
+    const tasks = [api('/content-partner/portal-sales'), api('/content-partner/portal-sales/permissions'), api('/content-partner/portal-sales/tree'), api('/content-partner/portal-sales/invitations'), api('/content-partner/portal-sales/reparent-requests'), api('/content-partner/portal-sales/packages')];
+    const results = await Promise.allSettled(tasks);
+    if (results[0].status === 'fulfilled') setData(results[0].value);
+    if (results[1].status === 'fulfilled') setPerms(results[1].value);
+    if (results[2].status === 'fulfilled') setTree(results[2].value.items || []);
+    if (results[3].status === 'fulfilled') setInvitations(results[3].value.items || []);
+    if (results[4].status === 'fulfilled') setRelocations(results[4].value.items || []);
+    if (results[5].status === 'fulfilled') setPackages(results[5].value.items || []);
+    else setPackages([]);
+    if (results[0].status === 'rejected') setError(results[0].reason?.message || 'Falha ao carregar rede comercial.');
+    else if (results[1].status === 'rejected') setError(results[1].reason?.message || 'Falha ao consultar permissões.');
+    else if (results[5].status === 'rejected' && results[1].status === 'fulfilled' && results[1].value?.permissions?.canSell) setError('Não foi possível carregar os Pacotes de Serviço. Atualize ou procure o suporte.');
+    else setError('');
+    if (results[1].status === 'fulfilled' && results[1].value?.permissions?.canManageGateways) {
+      try { setGateways(await api('/content-partner/portal-sales/gateways')); } catch { setGateways(null); }
+    }
+  }, []);
+  useEffect(() => { void refresh(); }, [refresh]);
+  const act = async (path, body, method = 'POST') => {
+    setError(''); setNotice(''); setBusy(true);
+    try { const result = await api(`/content-partner/portal-sales${path}`, { method, body }); setNotice('Operação salva com sucesso.'); await refresh(); return result; }
+    catch (e) { setError(e.message || 'Não foi possível concluir.'); return null; }
+    finally { setBusy(false); }
+  };
+  if (!data || !perms) return <div className="ps-panel" role="status">{error || 'Carregando a rede comercial…'}</div>;
+  const permissions = perms.permissions || {};
+  const enabled = Boolean(canOperate && perms.enabled);
+  const tabs = [
+    ['overview', 'Visão geral'],
+    ...(permissions.canSell ? [['sales', 'Vender acesso'], ['invitations', 'Convites e pagamentos']] : []),
+    ['network', 'Minha rede'],
+    ...(permissions.canViewFinance ? [['finance', 'Financeiro']] : []),
+    ...(permissions.canManageGateways ? [['gateway', 'Meus gateways']] : []),
+  ];
+  const active = tabs.some(([id]) => id === tab) ? tab : 'overview';
+  const descendants = tree.filter(item => item.depth > 0);
+  return <div className="ps-shell">
+    <div className="ps-hero"><div><span className="ps-eyebrow">PAINEL DO PARCEIRO · REDE COMERCIAL</span><h2>Venda acessos sem complicação</h2><p>Pacote de Serviço, valor negociado e convite. Cada comprador recebe seu próprio painel, sem estoque de licenças.</p></div>{permissions.canSell && <button className="primary ps-hero-cta" type="button" onClick={() => setTab('sales')}>+ Nova venda</button>}</div>
+    <nav className="ps-tabs" aria-label="Gestão comercial">{tabs.map(([key, label]) => <button key={key} type="button" onClick={() => setTab(key)} className={active === key ? 'is-active' : ''} aria-current={active === key ? 'page' : undefined}>{label}</button>)}</nav>
+    {!enabled && <p role="status" className="ps-notice">Sua distribuição comercial está suspensa. Consulte seu Master ou a DeltaTV.</p>}
+    {error && <div role="alert" className="ps-error">{error} <button className="outline" type="button" onClick={() => void refresh()}>Tentar novamente</button></div>}
+    {notice && <div role="status" className="ps-notice">{notice}</div>}
+    {active === 'overview' && <div className="ps-stack"><div className="ps-metrics ps-overview-metrics"><div><small>Submasters diretos</small><strong>{data.children?.length || 0}</strong></div><div><small>Integrantes da rede</small><strong>{descendants.length}</strong></div><div><small>Clientes diretos</small><strong>{data.contracts?.length || 0}</strong></div><div><small>Pacotes para vender</small><strong>{packages.length}</strong></div></div>
+      {permissions.canSell && <Panel title="Sua próxima venda começa aqui" description="Escolha o pacote e informe o cliente. Não é necessário comprar estoque de meses."><button type="button" className="primary" onClick={() => setTab('sales')}>Criar convite para novo cliente</button></Panel>}
+      <MyServicePackage />
+    </div>}
+    {active === 'sales' && permissions.canSell && <SalesForm packages={packages} permissions={permissions} gateways={gateways} busy={busy} enabled={enabled} onSave={act} created={createdInvite} onClear={() => setCreatedInvite(null)} />}
+    {active === 'invitations' && permissions.canSell && <Invitations invitations={invitations} busy={busy} canConfirmExternal={permissions.canViewFinance} onAction={act} />}
+    {active === 'network' && <Network data={data} tree={tree} permissions={permissions} relocations={relocations} busy={busy} onAction={act} />}
+    {active === 'gateway' && permissions.canManageGateways && <GatewaySettings settings={gateways} busy={busy} onAction={act} />}
+    {active === 'finance' && permissions.canViewFinance && <Finance orders={data.orders || []} busy={busy} onAction={act} />}
+  </div>;
 }
