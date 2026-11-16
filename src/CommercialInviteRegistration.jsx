@@ -1,6 +1,7 @@
 import React,{useEffect,useState} from 'react';
 import {completePortalSalesInvite,verifyPortalSalesInvite,recheckPortalSalesInvite} from './api.js';
 import './invite.css';
+import {formatBRL} from '@deltatv/ui/money';
 
 const validToken=/^[A-Za-z0-9_-]{32,100}$/;
 export default function CommercialInviteRegistration({token,onBack}){
@@ -25,13 +26,13 @@ export default function CommercialInviteRegistration({token,onBack}){
  };
  return <main className="invite-wrap"><div className="invite-card"><div className="brandico" aria-hidden="true">D</div>
   <p className="invite-eyebrow">DELTA TV · ACESSO AO PAINEL DO PARCEIRO</p>
-  {status==='checking'?<><h1>Validando convite comercial</h1><p>Conferindo validade e reserva de acesso…</p></>
+  {status==='checking'?<><h1>Validando convite comercial</h1><p>Conferindo validade do convite…</p></>
   :status==='invalid'?<><h1>Convite indisponível</h1><p role="alert">O convite expirou, já foi usado ou não é válido. Solicite outro ao seu Master.</p><button className="primary wide" onClick={onBack}>Ir para o login</button></>
   :status==='done'?<><h1>Conta criada!</h1><p>Seu acesso ao Painel do Parceiro está disponível pelo período contratado. Entre com e-mail e senha.</p><button className="primary wide" onClick={onBack}>Ir para o login</button></>
-  :<><h1>Ativar acesso ao Painel do Parceiro</h1><p>Convite: <strong>{data.inviteType==='submaster'?'Submaster':'Parceiro'}</strong>, plano <strong>{data.planName}</strong>, com <strong>{data.months} mês(es)</strong> de acesso reservado.</p>
+  :<><h1>Ativar acesso ao Painel do Parceiro</h1><p>Convite: <strong>{data.inviteType==='submaster'?'Submaster':'Parceiro'}</strong>, plano <strong>{data.planName}</strong>, com <strong>{data.months} mês(es)</strong> de acesso contratado.</p>
     {paymentDue&&<section className="notice" style={{display:'grid',gap:10}}>
      <strong>Pagamento necessário para liberar o cadastro</strong>
-     <p>Valor: {Number(data.totalCents||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}. O acesso só é liberado após confirmação do recebimento.</p>
+     <p>Valor: {formatBRL(data.totalCents)}. O acesso só é liberado após confirmação do recebimento.</p>
      {data.paymentGateway==='manual'&&<p>Pagamento externo: seu vendedor verificará o recebimento e confirmará no painel dele. Atualize esta página após a confirmação.</p>}
      {data.checkoutUrl&&<a className="primary wide" href={data.checkoutUrl} target="_blank" rel="noreferrer">Pagar agora pelo meu Master</a>}
      {data.pixCode&&<><label className="label">Pix copia e cola<textarea readOnly rows={3} value={data.pixCode}/></label><button type="button" className="outline" onClick={()=>navigator.clipboard?.writeText(data.pixCode)}>Copiar Pix</button></>}
@@ -46,7 +47,7 @@ export default function CommercialInviteRegistration({token,onBack}){
      <label className="label">Nome da empresa/parceria<input required value={name} minLength={2} maxLength={160} autoComplete="organization" onChange={e=>setName(e.target.value)}/></label>
      <label className="label">Crie uma senha<input required type="password" minLength={12} maxLength={128} autoComplete="new-password" value={password} onChange={e=>setPassword(e.target.value)}/></label>
      <label className="label">Confirme a senha<input required type="password" minLength={12} maxLength={128} autoComplete="new-password" value={confirm} onChange={e=>setConfirm(e.target.value)}/></label>
-     <p className="invite-help">Expira em {new Date(data.expiresAt).toLocaleString('pt-BR')}. Os meses foram reservados do estoque pré-pago do vendedor. A conta não recebe licenças de TV.</p>
+     <p className="invite-help">Expira em {new Date(data.expiresAt).toLocaleString('pt-BR')}. O acesso ao Painel do Parceiro será liberado após a confirmação do pagamento. Esta contratação não envolve licenças de TV.</p>
      {error&&<div className="alert" role="alert">{error}</div>}
      <button className="primary wide" disabled={busy||paymentDue}>{busy?'Criando conta…':paymentDue?'Aguardando pagamento':'Criar minha conta de Parceiro'}</button>
     </form><button type="button" className="invite-back" onClick={onBack}>Voltar ao login</button></>}
