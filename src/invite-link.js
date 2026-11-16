@@ -10,20 +10,21 @@ export function consumeInviteRequest(win = window) {
     return { token: String(early.token || ""), type: early.type || "legacy" };
   }
   const url = new URL(win.location.href);
+  const networkRoute=url.pathname === "/convite-rede" || url.pathname.startsWith("/convite-rede/");
   const commercialRoute = url.pathname === "/convite-comercial" || url.pathname.startsWith("/convite-comercial/");
-  const viaPath = url.pathname === "/convite" || url.pathname.startsWith("/convite/") || commercialRoute;
-  const routeToken = viaPath ? (url.pathname.match(/^\/convite(?:-comercial)?\/([^/]+)\/?$/)?.[1] || "") : "";
+  const viaPath = url.pathname === "/convite" || url.pathname.startsWith("/convite/") || commercialRoute || networkRoute;
+  const routeToken = viaPath ? (url.pathname.match(/^\/convite(?:-comercial|-rede)?\/([^/]+)\/?$/)?.[1] || "") : "";
   const legacyHash = new URLSearchParams(url.hash.startsWith("#") ? url.hash.slice(1) : "");
   const viaQuery = url.searchParams.has("convite");
   const viaHash = legacyHash.has("convite");
   if (!viaPath && !viaQuery && !viaHash) return null;
   const token = routeToken || (commercialRoute ? legacyHash.get("token") : null) || url.searchParams.get("convite") || legacyHash.get("convite") || "";
-  if (viaPath || viaQuery || viaHash) url.pathname = commercialRoute ? "/convite-comercial" : "/convite";
+  if (viaPath || viaQuery || viaHash) url.pathname = networkRoute ? '/convite-rede' : commercialRoute ? "/convite-comercial" : "/convite";
   url.searchParams.delete("convite");
   if (viaHash || commercialRoute) url.hash = "";
   // A URL mostra a rota publica, mas nao expõe o segredo.
   win.history.replaceState(win.history.state, "", url.pathname + url.search + url.hash);
-  return { token, type: commercialRoute ? "commercial" : "legacy" };
+  return { token, type: networkRoute ? 'network' : commercialRoute ? "commercial" : "legacy" };
 }
 
 // Mantém a API antiga para integrações que ainda a utilizarem.

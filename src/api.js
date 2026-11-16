@@ -23,6 +23,10 @@ export const verifyPortalSalesInvite = token => raw("/auth/portal-sales-invite/v
 export const recheckPortalSalesInvite = body => raw("/auth/portal-sales-invite/recheck",{method:"POST",body});
 export const completePortalSalesInvite = body => raw("/auth/portal-sales-invite/complete",{method:"POST",body});
 
+// Convites de Admin independente — não usar token de autenticação do painel.
+export const verifyAdminNetworkInvite = token => raw('/auth/admin-network-invite/verify',{method:'POST',body:{token}});
+export const completeAdminNetworkInvite = body => raw('/auth/admin-network-invite/complete',{method:'POST',body});
+
 // Públicos: são chamados sem sessão para não expor um access token num link de e-mail.
 export const requestPasswordReset = (email) => raw("/auth/password-reset/request", { method: "POST", body: { email } });
 export const completePasswordReset = (token, newPassword) => raw("/auth/password-reset/complete", { method: "POST", body: { token, newPassword } });
