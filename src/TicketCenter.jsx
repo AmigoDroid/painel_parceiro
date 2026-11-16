@@ -4,22 +4,28 @@ const categories=[['technical','Problema técnico'],['dns','DNS e servidores'],[
 const date=s=>new Date(s).toLocaleString('pt-BR');
 export default function TicketCenter(){
  const [tickets,setTickets]=useState([]),[selected,setSelected]=useState(null),[form,setForm]=useState({destination:'deltatv',category:'technical',priority:'normal',subject:'',message:''});
- const [message,setMessage]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[note,setNote]=useState('');
+ const [message,setMessage]=useState(''),[resource,setResource]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[note,setNote]=useState('');
  const load=()=>api('/content-partner/portal-sales/support/tickets').then(r=>setTickets(r.items||[])).catch(e=>setError(e.message));
  useEffect(()=>{void load();},[]);
  const exec=async(task)=>{setBusy(true);setError('');setNote('');try{const result=await task();setNote('Solicitação registrada.');await load();return result;}catch(e){setError(e.message||'Não foi possível completar.');return null;}finally{setBusy(false)}};
  const open=async id=>{const r=await exec(()=>api(`/content-partner/portal-sales/support/tickets/${id}`));if(r)setSelected(r);};
  return <div style={{display:'grid',gap:16,maxWidth:1050}}>
-  <header><h2>Central de Suporte DeltaTV</h2><p className="muted">Abra um chamado para seu Master responsável ou para a DeltaTV. Acompanhe as respostas e o histórico no próprio painel.</p></header>
+  <header><h2>Central de Suporte DeltaTV</h2><p className="muted">Abra um chamado diretamente para a DeltaTV e acompanhe as respostas pelo painel.</p></header>
   {error&&<p className="alert" role="alert">{error}</p>}{note&&<p className="notice" role="status">{note}</p>}
   <section className="panel" style={{padding:18,display:'grid',gap:12}}><h3>Novo chamado</h3>
-   <form style={{display:'grid',gap:12}} onSubmit={async e=>{e.preventDefault();const result=await exec(()=>api('/content-partner/portal-sales/support/tickets',{method:'POST',body:form}));if(result){setForm({destination:'deltatv',category:'technical',priority:'normal',subject:'',message:''});void open(result.id);}}}>
+   <form style={{display:'grid',gap:12}} onSubmit={async e=>{e.preventDefault();const context=resource.trim()?`Recurso informado: ${resource.trim()}\n\n`:'';
+      if(context.length+form.message.length>8000){setError('Reduza a descrição para incluir o recurso (máximo de 8.000 caracteres).');return;}
+      const payload={...form,message:context+form.message};
+      const result=await exec(()=>api('/content-partner/portal-sales/support/tickets',{method:'POST',body:payload}));if(result){setForm({destination:'deltatv',category:'technical',priority:'normal',subject:'',message:''});setResource('');void open(result.id);}}}>
     <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,220px),1fr))',gap:12}}>
-     <label style={{display:'grid',gap:6}}>Destinatário<select value={form.destination} onChange={e=>setForm({...form,destination:e.target.value})}><option value="deltatv">Suporte oficial DeltaTV</option><option value="master">Meu Master responsável</option></select></label>
+     <div className="notice">Atendimento: suporte oficial DeltaTV</div>
      <label style={{display:'grid',gap:6}}>Assunto<select value={form.category} onChange={e=>setForm({...form,category:e.target.value})}>{categories.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label>
      <label style={{display:'grid',gap:6}}>Prioridade<select value={form.priority} onChange={e=>setForm({...form,priority:e.target.value})}><option value="normal">Normal</option><option value="high">Alta</option><option value="urgent">Urgente</option></select></label>
     </div>
     <label style={{display:'grid',gap:6}}>Título<input required minLength="4" maxLength="160" value={form.subject} onChange={e=>setForm({...form,subject:e.target.value})} placeholder="Resuma o problema"/></label>
+    <label style={{display:'grid',gap:6}}>Código, DNS ou MAC afetado (opcional)
+      <input maxLength="120" value={resource} onChange={e=>setResource(e.target.value)} placeholder="Ex.: código 123456 ou nome do DNS"/>
+    </label>
     <label style={{display:'grid',gap:6}}>Descrição<textarea required rows="4" minLength="5" maxLength="8000" value={form.message} onChange={e=>setForm({...form,message:e.target.value})} placeholder="Descreva o problema e o que já tentou fazer"/></label>
     <div><button className="primary" disabled={busy}>Abrir chamado</button></div>
    </form>

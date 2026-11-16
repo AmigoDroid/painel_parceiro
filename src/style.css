@@ -364,3 +364,11 @@ button,select,input[type="checkbox"]{touch-action:manipulation}
 
 /* Contraste consistente da busca compartilhada no tema escuro. */
 .task-finder{--ui-surface:#19263e;--ui-text:#f1f6ff;--ui-border:#5b7096;--ui-accent:#a49af9;--ui-hover:#304267}
+
+/* Auditoria UX: legibilidade, estados de foco e gestos móveis */
+:root{--deltatv-accent:#8394ff;--deltatv-radius:14px;--deltatv-font:Inter,system-ui,sans-serif;}
+.partner-nav-label{font-size:12px;letter-spacing:.09em}.logo small,.eyebrow{font-size:12px}
+.nav button,.code-actions button,.servercard button{min-height:44px}
+:focus-visible{outline:3px solid #96aaff;outline-offset:2px}
+@media(max-width:700px){.modal{max-height:calc(100dvh - 24px);overflow-y:auto;overscroll-behavior:contain}.entry small,.servercard p,.stat small{font-size:13px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
