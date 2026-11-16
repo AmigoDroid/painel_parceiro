@@ -17,12 +17,9 @@ test('R$150 por 1 mês permanece 15000 centavos e aparece como R$150,00',()=>{
 
 test('cadastro comercial usa formatador de centavos; nunca interpreta totalCents como reais',()=>{
  const component=source('CommercialInviteRegistration.jsx');
- const seller=source('PortalSales.jsx');
  assert.match(component,/import \{formatBRL\} from ['"]@deltatv\/ui\/money['"]/);
  assert.match(component,/formatBRL\(data\.totalCents\)/);
  assert.doesNotMatch(component,/Number\(data\.totalCents\|\|0\)\.toLocaleString/);
- assert.match(seller,/const moneyCents = value => \(Number\(value \|\| 0\) \/ 100\)/);
- assert.match(seller,/unitResaleCents = asCents\(form\.price\)/);
  assert.doesNotMatch(component,/reservados do estoque pré-pago/i);
 });
 

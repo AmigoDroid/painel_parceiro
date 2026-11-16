@@ -25,7 +25,7 @@ function EmptyState({ title, description }) {
   return <div className="ps-empty"><strong>{title}</strong><p>{description}</p></div>;
 }
 function PackageSummary({ item }) {
-  if (!item) return <div className="ps-package-hint">Escolha um Pacote de Serviço para visualizar os benefícios.</div>;
+  if (!item) return <div className="ps-package-hint">Escolha o plano para visualizar os benefícios.</div>;
   return <div className="ps-package-hint"><strong>{item.name}</strong><div className="ps-benefits">
     <span>{item.maxDns == null ? 'DNS ilimitados' : `${item.maxDns} DNS por código`}</span>
     <span>{item.activationLimit == null ? 'Ativações ilimitadas' : `${item.activationLimit} ativações`}</span>
@@ -43,14 +43,15 @@ export function MyServicePackage() {
     return () => { alive = false; };
   }, []);
   if (error) return <div role="alert" className="alert">{error}</div>;
-  if (!info) return <div className="ps-panel">Carregando seu Pacote de Serviço…</div>;
+  if (!info) return <div className="ps-panel">Carregando seu plano…</div>;
   const usage = info.activations || {};
-  return <Panel title={`Meu Pacote de Serviço · ${info.packageName || 'Atual'}`} description="Benefícios e limites do seu próprio acesso ao Painel do Parceiro.">
+  return <Panel title={`Meu plano · ${info.packageName || 'Atual'}`} description="Benefícios e limites do seu próprio acesso ao Painel do Parceiro.">
     <div className="ps-metrics">
       <div><small>Meu ID DeltaTV</small><strong>{info.publicId || '—'}</strong><button className="ps-inline-button" type="button" onClick={() => void copyValue(info.publicId)}>Copiar ID</button></div>
       <div><small>DNS por código</small><strong>{info.dns?.limit == null ? 'Ilimitados' : info.dns.limit}</strong></div>
       <div><small>Ativações</small><strong>{usage.used ?? 0} / {usage.limit == null ? 'Ilimitadas' : usage.limit}</strong></div>
       <div><small>Validade do acesso</small><strong>{date(info.expiresAt)}</strong></div>
+      <div><small>Mensalidade a {info.feeRecipient || "DeltaTV"}</small><strong>{moneyCents(info.monthlyFeeCents || 0)}</strong></div>
     </div>
     <div className="ps-benefits" aria-label="Benefícios do pacote">{[
       ['autoFailover', 'Failover'], ['autoPriority', 'Prioridade automática'], ['emailAlerts', 'Alertas por e-mail'], ['detailedHistory', 'Histórico detalhado'],
@@ -69,9 +70,10 @@ export function MyServicePackage() {
   </Panel>;
 }
 
-function SalesForm({ packages, permissions, gateways, busy, enabled, onSave, created, onClear }) {
+function SalesForm({ packages, permissions, gateways, busy, enabled, onSave, created, onClear, onCreated }) {
   const [form, setForm] = useState(initialInvite);
-  const selected = packages.find(p => p.code === form.planCode);
+  const availablePlans = packages.filter(p => !p.canResellPanel || permissions.canCreateSubmasters);
+  const selected = availablePlans.find(p => p.code === form.planCode);
   const total = asCents(form.price) * Number(form.months || 0);
   const canUseGateway = Boolean(permissions.canManageGateways && gateways?.defaultGateway);
   const canUseManual = Boolean(permissions.canViewFinance);
@@ -84,10 +86,10 @@ function SalesForm({ packages, permissions, gateways, busy, enabled, onSave, cre
     if (selected.minResaleCents != null && unitResaleCents < Number(selected.minResaleCents)) return;
     if (!window.confirm(`Criar convite de ${months} mês(es) por ${moneyCents(unitResaleCents * months)}?`)) return;
     const result = await onSave('/invitations', {
-      invitedName: form.invitedName.trim(), invitedEmail: form.invitedEmail.trim(), inviteType: form.inviteType,
+      invitedName: form.invitedName.trim(), invitedEmail: form.invitedEmail.trim(), inviteType: selected.canResellPanel ? 'submaster' : 'customer',
       planCode: form.planCode, months, unitResaleCents, monthlyFeeCents: 0, paymentMode: form.paymentMode,
     });
-    if (result) setForm(initialInvite);
+    if (result) { setForm(initialInvite); onCreated(result); }
   };
   return <div className="ps-sales-columns">
     <Panel title="Nova venda" description="Preencha os dados, escolha o pacote e envie o convite. Sem estoque, créditos ou cadastros paralelos.">
@@ -95,13 +97,12 @@ function SalesForm({ packages, permissions, gateways, busy, enabled, onSave, cre
         <div className="ps-step-label">1 · Quem vai receber o acesso?</div>
         <div className="ps-form-grid"><FormField label="Nome ou empresa"><input required minLength={2} maxLength={160} autoComplete="off" value={form.invitedName} onChange={e => setForm(f => ({ ...f, invitedName: e.target.value }))} placeholder="Nome do comprador" /></FormField>
           <FormField label="E-mail"><input required type="email" maxLength={200} value={form.invitedEmail} onChange={e => setForm(f => ({ ...f, invitedEmail: e.target.value }))} placeholder="cliente@empresa.com" /></FormField></div>
-        <FormField label="Tipo de conta"><select value={form.inviteType} onChange={e => setForm(f => ({ ...f, inviteType: e.target.value }))}><option value="customer">Parceiro — utiliza o painel</option>{permissions.canCreateSubmasters && <option value="submaster">Submaster — pode formar rede se autorizado</option>}</select></FormField>
         <div className="ps-step-label">2 · O que será contratado?</div>
-        <FormField label="Pacote de Serviço"><select required value={form.planCode} onChange={e => setForm(f => ({ ...f, planCode: e.target.value }))}><option value="">Selecione o pacote</option>{packages.map(item => <option key={item.code} value={item.code}>{item.name}</option>)}</select></FormField>
+        <FormField label="Plano"><select required value={form.planCode} onChange={e => setForm(f => ({ ...f, planCode: e.target.value }))}><option value="">Selecione o plano</option>{availablePlans.map(item => <option key={item.code} value={item.code}>{item.name}{item.canResellPanel?' · permite revenda':''}</option>)}</select></FormField>
         <PackageSummary item={selected} />
         <div className="ps-form-grid"><FormField label="Valor negociado por mês (R$)"><input type="number" inputMode="decimal" required min="0" step="0.01" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="0,00" /></FormField>
           <FormField label="Duração (meses)"><input type="number" required min="1" max="120" value={form.months} onChange={e => setForm(f => ({ ...f, months: e.target.value }))} /></FormField></div>
-        {selected?.minResaleCents != null && asCents(form.price) < Number(selected.minResaleCents) && form.price !== '' && <p role="alert" className="ps-error">Este pacote exige valor mínimo de {moneyCents(selected.minResaleCents)} por mês.</p>}
+        {selected?.minResaleCents != null && asCents(form.price) < Number(selected.minResaleCents) && form.price !== '' && <p role="alert" className="ps-error">Este plano exige valor mínimo de {moneyCents(selected.minResaleCents)} por mês.</p>}
         <div className="ps-step-label">3 · Como será o pagamento?</div>
         <div className="ps-payment-options">
           {canUseManual && <label className={form.paymentMode === 'manual' ? 'selected' : ''}><input type="radio" name="sale-payment" checked={form.paymentMode === 'manual'} onChange={() => setForm(f => ({ ...f, paymentMode: 'manual' }))} /><span><strong>Pix externo</strong><small>Você confirma somente depois de receber.</small></span></label>}
@@ -118,7 +119,7 @@ function SalesForm({ packages, permissions, gateways, busy, enabled, onSave, cre
         <div className="ps-actions"><button className="outline" type="button" onClick={() => void copyValue(created.link)}>Copiar convite</button>{created.checkoutUrl && <a className="ps-action-link" href={created.checkoutUrl} target="_blank" rel="noreferrer">Abrir pagamento</a>}</div>
       </div>}
     </Panel>
-    <aside className="ps-sale-aside"><div className="ps-side-panel"><strong>Venda simplificada</strong><p>1. Identifique o cliente.</p><p>2. Escolha o pacote e o valor.</p><p>3. Envie o convite.</p><hr /><small>DNS, ativações e benefícios são aplicados pelo Pacote de Serviço. Não há estoque de meses para distribuir.</small></div></aside>
+    <aside className="ps-sale-aside"><div className="ps-side-panel"><strong>Venda simplificada</strong><p>1. Identifique o cliente.</p><p>2. Escolha o plano e o valor.</p><p>3. Envie o convite.</p><hr /><small>DNS, ativações e benefícios são aplicados pelo Plano. Não há estoque de meses para distribuir.</small></div></aside>
   </div>;
 }
 
@@ -202,7 +203,6 @@ function Finance({ orders, busy, onAction }) {
 }
 
 export default function PortalSales({ canOperate = true }) {
-  const [tab, setTab] = useState('overview');
   const [data, setData] = useState(null);
   const [perms, setPerms] = useState(null);
   const [tree, setTree] = useState([]);
@@ -226,7 +226,7 @@ export default function PortalSales({ canOperate = true }) {
     else setPackages([]);
     if (results[0].status === 'rejected') setError(results[0].reason?.message || 'Falha ao carregar rede comercial.');
     else if (results[1].status === 'rejected') setError(results[1].reason?.message || 'Falha ao consultar permissões.');
-    else if (results[5].status === 'rejected' && results[1].status === 'fulfilled' && results[1].value?.permissions?.canSell) setError('Não foi possível carregar os Pacotes de Serviço. Atualize ou procure o suporte.');
+    else if (results[5].status === 'rejected' && results[1].status === 'fulfilled' && results[1].value?.permissions?.canSell) setError('Não foi possível carregar os planos. Atualize ou procure o suporte.');
     else setError('');
     if (results[1].status === 'fulfilled' && results[1].value?.permissions?.canManageGateways) {
       try { setGateways(await api('/content-partner/portal-sales/gateways')); } catch { setGateways(null); }
@@ -242,29 +242,14 @@ export default function PortalSales({ canOperate = true }) {
   if (!data || !perms) return <div className="ps-panel" role="status">{error || 'Carregando a rede comercial…'}</div>;
   const permissions = perms.permissions || {};
   const enabled = Boolean(canOperate && perms.enabled);
-  const tabs = [
-    ['overview', 'Visão geral'],
-    ...(permissions.canSell ? [['sales', 'Vender acesso'], ['invitations', 'Convites e pagamentos']] : []),
-    ['network', 'Minha rede'],
-    ...(permissions.canViewFinance ? [['finance', 'Financeiro']] : []),
-    ...(permissions.canManageGateways ? [['gateway', 'Meus gateways']] : []),
-  ];
-  const active = tabs.some(([id]) => id === tab) ? tab : 'overview';
-  const descendants = tree.filter(item => item.depth > 0);
   return <div className="ps-shell">
-    <div className="ps-hero"><div><span className="ps-eyebrow">PAINEL DO PARCEIRO · REDE COMERCIAL</span><h2>Venda acessos sem complicação</h2><p>Pacote de Serviço, valor negociado e convite. Cada comprador recebe seu próprio painel, sem estoque de licenças.</p></div>{permissions.canSell && <button className="primary ps-hero-cta" type="button" onClick={() => setTab('sales')}>+ Nova venda</button>}</div>
-    <nav className="ps-tabs" aria-label="Gestão comercial">{tabs.map(([key, label]) => <button key={key} type="button" onClick={() => setTab(key)} className={active === key ? 'is-active' : ''} aria-current={active === key ? 'page' : undefined}>{label}</button>)}</nav>
-    {!enabled && <p role="status" className="ps-notice">Sua distribuição comercial está suspensa. Consulte seu Master ou a DeltaTV.</p>}
     {error && <div role="alert" className="ps-error">{error} <button className="outline" type="button" onClick={() => void refresh()}>Tentar novamente</button></div>}
     {notice && <div role="status" className="ps-notice">{notice}</div>}
-    {active === 'overview' && <div className="ps-stack"><div className="ps-metrics ps-overview-metrics"><div><small>Submasters diretos</small><strong>{data.children?.length || 0}</strong></div><div><small>Integrantes da rede</small><strong>{descendants.length}</strong></div><div><small>Clientes diretos</small><strong>{data.contracts?.length || 0}</strong></div><div><small>Pacotes para vender</small><strong>{packages.length}</strong></div></div>
-      {permissions.canSell && <Panel title="Sua próxima venda começa aqui" description="Escolha o pacote e informe o cliente. Não é necessário comprar estoque de meses."><button type="button" className="primary" onClick={() => setTab('sales')}>Criar convite para novo cliente</button></Panel>}
-      <MyServicePackage />
-    </div>}
-    {active === 'sales' && permissions.canSell && <SalesForm packages={packages} permissions={permissions} gateways={gateways} busy={busy} enabled={enabled} onSave={act} created={createdInvite} onClear={() => setCreatedInvite(null)} />}
-    {active === 'invitations' && permissions.canSell && <Invitations invitations={invitations} busy={busy} canConfirmExternal={permissions.canViewFinance} onAction={act} />}
-    {active === 'network' && <Network data={data} tree={tree} permissions={permissions} relocations={relocations} busy={busy} onAction={act} />}
-    {active === 'gateway' && permissions.canManageGateways && <GatewaySettings settings={gateways} busy={busy} onAction={act} />}
-    {active === 'finance' && permissions.canViewFinance && <Finance orders={data.orders || []} busy={busy} onAction={act} />}
+    {!enabled && <p role="status" className="ps-notice">A revenda de painel não está ativa para sua conta. Consulte o responsável pelo seu plano.</p>}
+    {permissions.canSell && <SalesForm packages={packages} permissions={permissions} gateways={gateways} busy={busy} enabled={enabled} onSave={act} created={createdInvite} onCreated={setCreatedInvite} onClear={() => setCreatedInvite(null)} />}
+    {permissions.canSell && <Panel title="Convites enviados" description="Acompanhe cobranças e cadastros nesta mesma página."><Invitations invitations={invitations} busy={busy} canConfirmExternal={permissions.canViewFinance} onAction={act} /></Panel>}
+    {permissions.canCreateSubmasters && <details className="ps-details"><summary>Gerenciar minha rede</summary><Network data={data} tree={tree} permissions={permissions} relocations={relocations} busy={busy} onAction={act} /></details>}
+    {permissions.canViewFinance && <details className="ps-details"><summary>Recebimentos</summary><Finance orders={data.orders || []} busy={busy} onAction={act} /></details>}
+    {permissions.canManageGateways && <details className="ps-details"><summary>Meus meios de pagamento</summary><GatewaySettings settings={gateways} busy={busy} onAction={act} /></details>}
   </div>;
 }
