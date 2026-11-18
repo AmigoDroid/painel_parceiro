@@ -1,3 +1,5 @@
+import Modal from "@deltatv/ui/Dialog";
+import { useBulkRemoval } from "../shared/useBulkRemoval.jsx";
 import ConnectionAudit from "./ConnectionAudit.jsx";
 import React,{useCallback,useEffect,useState} from "react";
 import {api} from "./api.js";
@@ -31,15 +33,25 @@ export function PartnerDevices(){
  useEffect(()=>{let cancelled=false;const timer=setTimeout(()=>{setLoading(true);api(BASE+"/devices",{query:{q,page,pageSize:20}}).then(r=>{if(!cancelled){setData(r);setError("")}}).catch(e=>{if(!cancelled)setError(e.message)}).finally(()=>{if(!cancelled)setLoading(false)})},250);return()=>{cancelled=true;clearTimeout(timer)}},[q,page,tick]);
  // Atualiza apenas a lista aberta; não cria uma consulta por TV.
  useEffect(()=>{if(auditId)return;const timer=setInterval(()=>{if(!document.hidden)setTick(x=>x+1)},20000);return()=>clearInterval(timer)},[auditId]);
+ const bulk = useBulkRemoval({
+   Modal, rows: data.data, scope: JSON.stringify([q,page]), loading,
+   id: d => d.id, label: d => [d.mac,d.code].filter(Boolean).join(" · "),
+   eligible: d => d.status !== "revoked",
+   requireReason: true,
+   description: "Os vínculos selecionados serão encerrados e as credenciais dessas ativações serão apagadas. Os créditos utilizados não têm reembolso automático.",
+   remove: (d,reason) => api(`${BASE}/devices/${d.id}/revoke`, {method:"POST", body:{reason}}),
+   refresh: () => setTick(n => n+1),
+ });
  const unlink=async d=>{
   if(!window.confirm(`Desvincular ${d.mac} da sua parceria? O acesso desta lista será encerrado e as credenciais apagadas. Não há reembolso automático de créditos.`))return;
   const reason=window.prompt("Motivo do desvínculo (obrigatório):", "Cliente saiu da parceria");if(!reason||reason.trim().length<3)return;
   setBusy(d.id);try{await api(`${BASE}/devices/${d.id}/revoke`,{method:"POST",body:{reason}});setTick(n=>n+1)}catch(e){setError(e.message)}finally{setBusy(null)};
  };
- return <section>{auditId&&<ConnectionAudit path={`${BASE}/devices/${auditId}/connection-audit`} onClose={()=>setAuditId(null)}/>}<div className="heading"><p>Consulte as ativações da sua parceria. Use a pesquisa para localizar um dispositivo pelo MAC.</p><input className="search" placeholder="Buscar MAC" value={q} onChange={e=>{setQ(e.target.value);setPage(1)}}/></div>
+ return <section className="delta-tv-list">{auditId&&<ConnectionAudit path={`${BASE}/devices/${auditId}/connection-audit`} onClose={()=>setAuditId(null)}/>}<div className="heading"><p>Consulte as ativações da sua parceria. Use a pesquisa para localizar um dispositivo pelo MAC.</p><input className="search" placeholder="Buscar MAC" value={q} onChange={e=>{setQ(e.target.value);setPage(1)}}/></div>
+  {bulk.toolbar}
   {error&&<div className="alert">{error}</div>}
   {loading&&<p role="status">Carregando…</p>}<div className="device-list">{data.data.map(d=><article className="device-row" key={d.id}>
-   <div className="device-top"><b className="mono break">{d.mac}</b><span className={`pill ${d.status==="active"?"healthy":d.status==="blocked"?"suspect":"down"}`}>{{active:"Ativo",blocked:"Bloqueado",revoked:"Removido"}[d.status]||"Indisponível"}</span></div>
+   <div className="device-top"><b className="mono break">{bulk.checkbox(d)}{d.mac}</b><span className={`pill ${d.status==="active"?"healthy":d.status==="blocked"?"suspect":"down"}`}>{{active:"Ativo",blocked:"Bloqueado",revoked:"Removido"}[d.status]||"Indisponível"}</span></div>
    {d.live?.online && <div className="device-meta"><div><small>IP observado</small><strong>{d.live.ip || 'Indisponível'}</strong></div><div><small>Assistindo agora</small><strong>{d.live.playback?.title || 'Sem reprodução ativa'}</strong></div></div>}
    <div className="device-meta"><div><small>Código</small><strong>{d.code||"Não informado"}</strong></div><div><small>Ativado em</small><strong>{new Date(d.activatedAt).toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo"})}</strong></div><div><small>Origem da licença</small><strong>{d.licenseSource==="reseller_stock"?"Estoque de revenda":"Parceria"}</strong></div></div>
    <button className="outline device-action" onClick={()=>setAuditId(d.id)}>Conexão / URL</button>
