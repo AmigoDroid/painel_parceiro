@@ -1,1 +1,0 @@
-import{c as o,j as t}from"./style-NmMsHqP4.js";import{R as _}from"./password-reset-CB7Yb2K5.js";const e=window.__DELTA_PASSWORD_RESET_TOKEN__||"";window.__DELTA_PASSWORD_RESET_TOKEN__=void 0;o.createRoot(document.getElementById("root")).render(t.jsx(_,{token:e}));
