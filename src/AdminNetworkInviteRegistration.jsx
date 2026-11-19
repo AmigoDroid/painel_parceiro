@@ -3,7 +3,7 @@ import {verifyAdminNetworkInvite,completeAdminNetworkInvite} from './api.js';
 import {formatBRL} from '@deltatv/ui/money';
 import './invite.css';
 
-export default function AdminNetworkInviteRegistration({token,onBack}){
+export default function AdminNetworkInviteRegistration({token,onBack,onRegistered=onBack}){
  const [info,setInfo]=useState(null),[state,setState]=useState('loading'),[error,setError]=useState('');
  const [email,setEmail]=useState(''),[name,setName]=useState(''),[password,setPassword]=useState(''),[confirm,setConfirm]=useState('');
  const [busy,setBusy]=useState(false),[createdStatus,setCreatedStatus]=useState('active');
@@ -28,7 +28,7 @@ export default function AdminNetworkInviteRegistration({token,onBack}){
   <div className="brandico" aria-hidden="true">D</div><p className="invite-eyebrow">DELTATV · CONVITE</p>
   {state==='loading'?<><h1>Validando convite</h1><p>Consultando as condições de sua rede…</p></>:
   state==='done'?<><h1>Cadastro concluído</h1><p>Sua conta foi vinculada à rede que enviou o convite. {createdStatus==='active'?info?.kind==='reseller'?'Acesse revenda.deltatv.com.br com seu e-mail e senha.':'Você já pode entrar com seu e-mail e senha.':'Seu plano é pago; aguarde a confirmação do pagamento pela administração para liberar o acesso.'}</p>
-   <button className="primary wide" onClick={onBack}>Ir para o login</button></>:
+   <button className="primary wide" onClick={()=>onRegistered(info?.kind)}>Ir para o login</button></>:
   state!=='ready'?<><h1>Convite indisponível</h1><p role="alert">{error||'Solicite outro link.'}</p><button className="invite-back" onClick={onBack}>Voltar</button></>:
   <><h1>Crie sua conta de {info.kind==='reseller'?'Revenda':'Parceiro'}</h1><p>Seu acesso será configurado automaticamente conforme o plano escolhido pela administração.</p>
     <div className="invite-help" style={{display:'grid',gap:6,marginBottom:14}}>

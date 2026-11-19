@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import InviteRegistration from "./InviteRegistration.jsx";
 import AdminNetworkInviteRegistration from "./AdminNetworkInviteRegistration.jsx";
 import CommercialInviteRegistration from "./CommercialInviteRegistration.jsx";
+import { resolveInviteLoginTarget } from "./invite-login-target.js";
 import "./style.css";
 
 const STORAGE_KEY = window.__DELTA_PARTNER_INVITE_REQUEST__?.type === "network" ? "delta-partner-pending-network-invite" : window.__DELTA_PARTNER_INVITE_REQUEST__?.type === "commercial" ? "delta-partner-pending-commercial-invite" : "delta-partner-pending-invite";
@@ -11,6 +12,14 @@ const request = window.__DELTA_PARTNER_INVITE_REQUEST__ || { token: "" };
 function goToLogin() {
   try { sessionStorage.removeItem(STORAGE_KEY); } catch {}
   window.location.replace("/");
+}
+
+function goToRegistrationLogin(kind) {
+  try { sessionStorage.removeItem(STORAGE_KEY); } catch (error) { console.warn("[partner-invite] Session storage indisponível", error); }
+  window.location.replace(resolveInviteLoginTarget(kind, {
+    resellerOrigin: import.meta.env.VITE_RESELLER_URL,
+    dev: import.meta.env.DEV,
+  }));
 }
 
 class InviteErrorBoundary extends React.Component {
@@ -29,6 +38,6 @@ class InviteErrorBoundary extends React.Component {
 
 createRoot(document.getElementById("root")).render(
   <InviteErrorBoundary>
-    {request.type === 'network' ? <AdminNetworkInviteRegistration token={request.token} onBack={goToLogin} /> : request.type === "commercial" ? <CommercialInviteRegistration token={request.token} onBack={goToLogin} /> : <InviteRegistration token={request.token} onBack={goToLogin} />}
+    {request.type === 'network' ? <AdminNetworkInviteRegistration token={request.token} onBack={goToLogin} onRegistered={goToRegistrationLogin} /> : request.type === "commercial" ? <CommercialInviteRegistration token={request.token} onBack={goToLogin} /> : <InviteRegistration token={request.token} onBack={goToLogin} />}
   </InviteErrorBoundary>
 );

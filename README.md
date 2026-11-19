@@ -8,7 +8,9 @@ cp .env.example .env.production
 npm run build
 ```
 
-No ambiente local, configure `.env.local` com `VITE_API_URL=http://localhost:3000`, execute `npm run dev` e autorize a origem `http://localhost:5176` no CORS do backend.
+No ambiente local, configure `.env.local` com `VITE_API_URL=http://localhost:3000` e execute `npm run dev`. A porta 5176 já consta do `CORS_ORIGINS` em `backend/.env.example`. Na produção, configure explicitamente `CORS_ORIGINS` com as origens HTTPS reais de cada painel; não use `*` nem dependa dos endereços de desenvolvimento.
+
+Para convites administrativos de **Revenda**, configure `VITE_RESELLER_URL=https://revenda.seudominio.com.br` no build do painel Parceiro. A conclusão do convite abre essa origem; para **Parceiro**, mantém o login local. Sem configuração, o destino da Revenda é `http://localhost:5175` no desenvolvimento e `https://revenda.deltatv.com.br` na produção. A URL configurada deve ser somente a origem HTTPS em produção.
 
 Login exclusivo: usuário da parceria `kind=content|both`, cadastrado com `role=partner`, utilizando audiência `content_partner`.
 
