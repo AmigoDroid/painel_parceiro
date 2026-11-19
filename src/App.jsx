@@ -27,12 +27,12 @@ const NAV_GROUPS=[
  {label:"Pagamentos",items:[["billing","Faturas e pagamentos","receipt"],["credits","Créditos e extrato","coins"]]},
  {label:"Dispositivos",items:[["devices","Minhas TVs","monitor"],["customers","Clientes","users"],["support","Resolver problema da TV","activity"]]},
  {label:"Licenças",items:[["licenses","Licenças e ativações","shield"],["commercial","Contrato e licenças","wallet"]]},
- {label:"Ativar aplicativo",items:[["codes","Códigos para ativar TVs","key"],["white-label","Meus aplicativos","download"],["web","Player Web","globe"],["downloads","Downloads e links","download"]]},
+ {label:"Ativar aplicativo",items:[["codes","Códigos para ativar TVs","key"],["white-label","Meus aplicativos","download"],["web","Player Web","globe"],["downloads","Aplicativos","download"]]},
  {label:"Servidores e personalização",items:[["servers","Meus DNS","server"],["monitor","Saúde dos DNS","activity"],["studio","Estúdio Visual","monitor"]]},
  {label:"Minha conta",items:[["account","Minha conta","account"],["tickets","Central de Suporte","help"],["access","Histórico de login","history"],["notifications","Notificações","bell"],["help","Guias e tutoriais","help"]]},
 ];
 // Modo simples não pode esconder pagamentos, vigência ou acesso ao PlayerWeb.
-const SIMPLE_PARTNER = new Set(["overview", "support", "customers", "devices", "codes", "servers", "monitor", "notifications", "help", "tickets", "account", "billing", "commercial", "licenses", "web"]);
+const SIMPLE_PARTNER = new Set(["overview", "support", "customers", "devices", "codes", "servers", "monitor", "notifications", "help", "tickets", "account", "billing", "commercial", "licenses", "web", "downloads"]);
 const SCREEN_SUBTITLES={
  overview:"Acompanhe sua operação, códigos e infraestrutura em um só lugar.",
  customers:"Gerencie os clientes associados à sua parceria.",
@@ -45,7 +45,7 @@ const SCREEN_SUBTITLES={
  studio:"Personalize o visual e publique novos temas para seus aplicativos Roku.",
  servers:"Configure e acompanhe seus servidores de conteúdo.",
  monitor:"Disponibilidade e latência dos servidores, em tempo real.",
- downloads:"Consulte os aplicativos e links disponibilizados.",
+ downloads:"Aprenda a instalar DeltaTV no Android, TV Box e Roku, e consulte links e códigos de download.",
  commercial:"Condições do contrato e capacidade disponível.",
  credits:"Acompanhe movimentações e saldos de créditos.",
  billing:"Consulte suas faturas e informações financeiras.",

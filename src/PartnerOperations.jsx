@@ -1,3 +1,4 @@
+import AppInstallGuide from "@deltatv/ui/AppInstallGuide";
 import React, { useCallback, useEffect, useState } from "react";
 import { api, logout } from "./api.js";
 import { toCents, moneyInput } from "@deltatv/ui/money";
@@ -81,9 +82,9 @@ export function BillingHistory() {
  return <section><div className="heading"><p>Faturas e pagamentos da sua parceria. Os valores e condições são definidos pela Delta TV.</p></div><div className="filterbar"><button className={tab==="invoices"?"primary":"outline"} onClick={()=>{setTab("invoices");setPage(1)}}>Faturas</button><button className={tab==="payments"?"primary":"outline"} onClick={()=>{setTab("payments");setPage(1)}}>Pagamentos</button></div><ErrorView message={error}/>{loading&&<p>Carregando…</p>}<div className="cards two-cols">{(data.data||[]).map(x=><article className="servercard" key={x.id}><div className="between"><b>{tab==="invoices"?`Competência ${x.competence}`:`Pagamento ${String(x.id).slice(0,8)}`}</b><span className="pill checking">{status(x.status)}</span></div><div className="two"><span>Valor</span><b>{money(x.amountCents)}</b></div><div className="two"><span>{tab==="invoices"?"Vencimento":"Pago em"}</span><b>{tab==="invoices"?day(x.dueDate):date(x.paidAt)}</b></div>{tab==="invoices"&&<div className="two"><span>Já pago</span><b>{money(x.paidCents)}</b></div>}</article>)}{!loading&&!(data.data||[]).length&&<div className="empty">Nenhum registro encontrado.</div>}</div><Pager data={data} page={page} setPage={setPage}/></section>;
 }
 
+const loadPublishedDownloads = ({ page, pageSize }) => api("/app-installation/downloads", { query: { page, pageSize } });
 export function AppDownloads() {
- const [q,setQ]=useState(""),[page,setPage]=useState(1);const {data,error,loading}=usePaged(BASE+"/downloads",{q,page});
- return <section><div className="heading"><p>Aplicativos e links autorizados pela Delta TV para compartilhar com seus clientes.</p><Search value={q} setValue={v=>{setQ(v);setPage(1)}}/></div><ErrorView message={error}/>{loading&&<p>Carregando…</p>}<div className="cards two-cols">{(data.data||[]).map(x=><article className="servercard" key={x.id}><div className="between"><span className="pill checking">{x.kind==="app"?"Aplicativo":"Link"}</span><small>{x.version||""}</small></div><h3>{x.name}</h3>{x.downloaderCode&&<p>Código Downloader: <b>{x.downloaderCode}</b></p>}<a className="primary action-link" target="_blank" rel="noopener noreferrer" href={x.downloadUrl}>Abrir link</a></article>)}{!loading&&!(data.data||[]).length&&<div className="empty">Nenhum download disponível.</div>}</div><Pager data={data} page={page} setPage={setPage}/></section>;
+ return <AppInstallGuide loadDownloads={loadPublishedDownloads}/>;
 }
 
 export function CreditsLedger() {
