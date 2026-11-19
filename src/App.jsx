@@ -1,6 +1,7 @@
 import {Breadcrumb,PlatformBrand} from "../shared/PanelExperience.jsx";
 import { panelAllows } from "../shared/permissions.js";
 import TaskFinder from "@deltatv/ui/TaskFinder";
+import AppInstallSpotlight from "@deltatv/ui/AppInstallSpotlight";
 import DeletionDialog from "./DeletionDialog.jsx";
 import { TASKS } from "./task-directory.js";
 import React,{useEffect,useState,useCallback} from "react";
@@ -215,6 +216,7 @@ function PartnerPortalApp(){
  <div className="body"><Breadcrumb panel="parceiro" current={SCREEN_TITLES[screen]||"Início"} onHome={()=>navigate("overview")}/>
  {simpleMode && screen!=="overview" && <EasyPageGuide role="partner" page={screen} onBack={()=>navigate("overview")}/>}
  <HelpExperience screen={screen} portal="content" userId={user.id} onNavigate={navigate}/>
+ {screen==="overview"&&<AppInstallSpotlight onOpen={() => navigate("downloads")} />}
  {screen==="overview"&&<EasyStart role="partner" onNavigate={navigate}/>}
  {screen==="overview"&&<section className="panel" style={{marginTop:16,padding:18,display:'grid',gap:10}}>
    <h3>Minha central de gerenciamento</h3><p className="muted">Acesse os dispositivos, DNS, suporte e recursos operacionais da sua parceria.</p>
