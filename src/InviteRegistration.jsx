@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { completePartnerInvite, verifyPartnerInvite } from "./api.js";
+import { messageForInviteError, retryableInviteError } from "./invite-error-policy.js";
 import "./invite.css";
 
 const TOKEN_FORMAT = /^[A-Za-z0-9_-]{32,100}$/;
@@ -33,13 +34,9 @@ export default function InviteRegistration({ token, onBack }) {
       })
       .catch((error) => {
         if (!active) return;
-        const retryable = error?.status === 0 || error?.status === 429 || error?.status >= 500;
-        setValidation({
-          state: retryable ? "retry" : "invalid", data: null,
-          message: retryable
-            ? "Não foi possível consultar a API agora. Tente validar o convite novamente."
-            : "Convite inválido, expirado, cancelado ou já utilizado. Solicite um novo convite ao administrador."
-        });
+        const retryable = retryableInviteError(error);
+        setValidation({ state: retryable ? "retry" : "invalid", data: null,
+          message: messageForInviteError(error) });
       });
     return () => { active = false; };
   }, [token, attempt]);
@@ -60,7 +57,7 @@ export default function InviteRegistration({ token, onBack }) {
       setConfirmPassword("");
       setDone(true);
     } catch (error) {
-      setSubmitError(error?.message || "Não foi possível concluir o cadastro.");
+      setSubmitError(messageForInviteError(error,{stage:"complete"}));
     } finally {
       setSaving(false);
     }
