@@ -16,3 +16,25 @@ test('valor da prévia não pode ser informado livremente pelo parceiro',()=>{
  assert.match(upgrade,/method:'POST',body:\{planTo:selected,previewFingerprint/);
  assert.match(upgrade,/Para downgrade, entre em contato com seu <strong>Master<\/strong>/);
 });
+
+test('contato do Master fica na página inicial, fora do menu lateral',()=>{
+ const app=read('App.jsx');
+ assert.doesNotMatch(app,/className="master-contact"/);
+ assert.match(app,/screen==="overview"&&master&&<section className="master-home-contact"/);
+ assert.ok(app.indexOf('<AppInstallSpotlight')<app.indexOf('className="master-home-contact"'));
+ assert.ok(app.indexOf('className="master-home-contact"')<app.indexOf('<EasyStart role="partner"'));
+ assert.match(app,/master\.name\|\|'Master'/);
+ assert.match(app,/master\.phone\|\|'Telefone ainda não cadastrado'/);
+});
+
+test('botão de WhatsApp só aparece para telefone brasileiro válido e abre endereço seguro',()=>{
+ const app=read('App.jsx');
+ const css=read('style.css');
+ assert.match(app,/masterDigits=String\(master\?\.phone\|\|''\)\.replace\(\/\\D\/g,''\)/);
+ assert.match(app,/\^55\\d\{10,11\}\$/);
+ assert.match(app,/href=\{`https:\/\/wa\.me\/\$\{masterWhatsapp\}`\}/);
+ assert.match(app,/masterWhatsapp\?<a className="master-home-whatsapp"/);
+ assert.match(app,/target="_blank" rel="noopener noreferrer"/);
+ assert.match(css,/\.master-home-contact\{display:flex/);
+ assert.match(css,/@media\(max-width:720px\)\{\.master-home-contact/);
+});

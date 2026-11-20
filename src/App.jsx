@@ -209,6 +209,8 @@ function PartnerPortalApp(){
   }catch(e){setError(e.message)}finally{setSaving(false)}};
  const revoke=async c=>{if(!window.confirm(`Revogar o código ${c.code}? Dispositivos já ativados permanecem ativos.`))return;try{await api(`${BASE}/codes/${c.id}/revoke`,{method:"POST"});reloadCodeList()}catch(e){setError(e.message)}};
  const visibleCodes=codes.rows;
+ const masterDigits=String(master?.phone||'').replace(/\D/g,'');
+ const masterWhatsapp=/^55\d{10,11}$/.test(masterDigits)?masterDigits:/^\d{10,11}$/.test(masterDigits)?`55${masterDigits}`:null;
  if(!user && forgotMode)return <ForgotPassword initialEmail={credentials.email} onBack={()=>{setForgotMode(false);setError("")}}/>;
  if(!user)return <main className="loginwrap"><form className="login" onSubmit={signIn}><div className="brandico brandico-login">D</div><h1>Delta TV <span>Parceiros</span></h1><p>Servidores, parcerias e disponibilidade em um só lugar.</p><label className="label">E-mail<input type="email" required autoComplete="username" value={credentials.email} onChange={e=>setCredentials({...credentials,email:e.target.value})} placeholder="seu@email.com"/></label><label className="label">Senha<input type="password" required autoComplete="current-password" value={credentials.password} onChange={e=>setCredentials({...credentials,password:e.target.value})} placeholder="••••••••"/></label>{error&&<div className="alert">{error}</div>}<button disabled={loading} className="primary wide">{loading?"Entrando…":"Entrar no painel"}</button><button type="button" className="reset-login-link" onClick={()=>{setForgotMode(true);setError("")}}>Esqueceu a senha?</button><small>Uso exclusivo dos parceiros de conteúdo Delta TV.</small></form></main>;
  if (user.renewalOnly) return <main className="shell" style={{display:'block',minHeight:'100vh'}}>
@@ -225,7 +227,6 @@ function PartnerPortalApp(){
  <aside className={`aside ${mobileMenu?"mobile-open":""}`}>
   <div className="logo"><div className="brandico">D</div><div className="brandcopy">Delta TV<small>PORTAL DO PARCEIRO</small></div><button type="button" className="close mobile-close" aria-label="Fechar menu" onClick={()=>setMobileMenu(false)}><Icon name="x" size={20}/></button></div>
   
- {master&&<div className="master-contact"><strong>Fale com seu Master</strong><span>{master.name}</span>{master.phone?<a href={`tel:${master.phone.replace(/[^\d+]/g,'')}`}>{master.phone}</a>:<small>Telefone não cadastrado. Solicite ao Master que atualize o perfil.</small>}</div>}
   <nav className="nav" aria-label="Navegação do parceiro">{NAV_GROUPS.map(group=><div key={group.label} className="partner-nav-group"><span className="partner-nav-label">{group.label}</span>{group.items.filter(([id])=>(id!=="studio"||studioApps.length>0)&&(
  !simpleMode||SIMPLE_PARTNER.has(id)||screen===id)).map(([id,name,ico])=><button type="button" className={screen===id?"active":""} aria-current={screen===id?"page":undefined} key={id} data-help-target={({overview:"home", account:"profile", "white-label":"apps", studio:"studio", servers:"servers", codes:"codes", devices:"devices", licenses:"licenses", billing:"billing", notifications:"notifications", help:"help"})[id] || undefined} onClick={()=>navigate(id)}><span className="nav-icon"><Icon name={ico} size={19}/></span><span className="nav-text">{name}</span>{id==="notifications"&&showBadge&&unread>0&&<b className="nav-count">{unread}</b>}{screen===id&&<Icon name="chevronRight" size={14} className="nav-chevron"/>}</button>)}</div>)}</nav>
   <div className="sidefoot"><span className={`side-status-dot ${data.monitorEnabled?"is-on":""}`}/><div><span>Monitoramento</span><b>{data.monitorEnabled?"Ativado":"Desativado"}</b></div></div>
@@ -235,6 +236,11 @@ function PartnerPortalApp(){
  {simpleMode && screen!=="overview" && <EasyPageGuide role="partner" page={screen} onBack={()=>navigate("overview")}/>}
  <HelpExperience screen={screen} portal="content" userId={user.id} onNavigate={navigate}/>
  {screen==="overview"&&<AppInstallSpotlight onOpen={() => navigate("downloads")} />}
+ {screen==="overview"&&master&&<section className="master-home-contact" aria-label="Contato do Master">
+  <div className="master-home-contact-symbol"><Icon name="users" size={25}/></div>
+  <div className="master-home-contact-info"><span>Fale com seu Master</span><h2>{master.name||'Master'}</h2><p>{master.phone||'Telefone ainda não cadastrado'}</p></div>
+  {masterWhatsapp?<a className="master-home-whatsapp" href={`https://wa.me/${masterWhatsapp}`} target="_blank" rel="noopener noreferrer" aria-label={`Chamar ${master.name||'Master'} no WhatsApp`}>Chamar no WhatsApp <Icon name="arrow" size={18}/></a>:<small className="master-home-contact-empty">Peça ao Master para cadastrar o telefone em Minha conta.</small>}
+ </section>}
  {screen==="overview"&&<EasyStart role="partner" onNavigate={navigate}/>}
  {screen==="overview"&&<section className="panel" style={{marginTop:16,padding:18,display:'grid',gap:10}}>
    <h3>Minha central de gerenciamento</h3><p className="muted">Acesse os dispositivos, DNS, suporte e recursos operacionais da sua parceria.</p>
