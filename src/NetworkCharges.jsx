@@ -17,7 +17,7 @@ export default function NetworkCharges(){
  const reload=async()=>{setBusy(true);try{const res=await api('/partner/network-charges');setCharges(res.data||[]);try{setPricing(await api('/partner/network-charges/pricing'))}catch{setPricing(null)}setError('')}catch(e){setError(e.message)}finally{setBusy(false)}};
  useEffect(()=>{void reload()},[]);
  const copy=async value=>{try{await navigator.clipboard.writeText(value);setCopyMsg('Copiado.')}catch{setCopyMsg('Não foi possível copiar automaticamente. Selecione o texto abaixo.')}};
- return <section><div className="heading"><h2>Renovações e upgrades da minha conta</h2><button className="outline" onClick={reload} disabled={busy}>Atualizar pagamentos</button></div>
+ return <section><div className="heading"><h2>Cobranças e pagamentos da minha conta</h2><button className="outline" onClick={reload} disabled={busy}>Atualizar pagamentos</button></div>
  <p>As cobranças são registradas por quem administra sua rede. O acesso só é prorrogado depois da confirmação do recebimento.</p>
  {pricing&&<article className="servercard"><h3>Meu plano{pricing.planName?` · ${pricing.planName}`:""} — condições da renovação</h3><p>{pricing.conditions}</p>
    {pricing.renewalAvailable===false&&<p role="status"><strong>Plano reservado à administração.</strong> {pricing.reason}</p>}
@@ -27,9 +27,9 @@ export default function NetworkCharges(){
  {error&&<div role="alert" className="alert">{error}</div>}{copyMsg&&<p role="status">{copyMsg}</p>}
  <div className="cards two-cols">{charges.map(c=>{
   const text=c.pixCode||c.checkoutUrl||'';
-  return <article className="servercard" key={c.id}><div className="between"><b>{c.kind==='renewal'?'Renovação':'Upgrade'} · {c.planTo}</b><span className="pill checking">{status[c.status]||c.status}</span></div>
+  return <article className="servercard" key={c.id}><div className="between"><b>{c.kind==='one_off'?`Cobrança avulsa · ${c.description||'Serviço adicional'}`:`${c.kind==='renewal'?'Renovação':'Upgrade'} · ${c.planTo}`}</b><span className="pill checking">{status[c.status]||c.status}</span></div>
    <p><strong>{money(c.amountCents)}</strong></p>{c.breakdown?.totalCents>0&&<div aria-label="Composição da cobrança">
-    <div>Plano/base: {money(c.breakdown.baseCents)}</div>
+    <div>{c.kind==='one_off'?'Serviço':'Plano/base'}: {money(c.breakdown.baseCents)}</div>
     {c.breakdown.earlyDiscountCents>0&&<div>Desconto antecipado: −{money(c.breakdown.earlyDiscountCents)}</div>}
     {c.breakdown.manualDiscountCents>0&&<div>Desconto concedido: −{money(c.breakdown.manualDiscountCents)}</div>}
     {c.breakdown.lateFeeCents>0&&<div>Multa {c.breakdown.lateFeePct}%: {money(c.breakdown.lateFeeCents)}</div>}
@@ -44,6 +44,6 @@ export default function NetworkCharges(){
    </div>}
    {c.status==='pending'&&!text&&<p>Aguardando conferência manual pelo responsável da rede.</p>}
   </article>})}</div>
- {!charges.length&&!busy&&<p>Nenhuma renovação ou upgrade pendente.</p>}
+ {!charges.length&&!busy&&<p>Nenhuma cobrança registrada.</p>}
  </section>;
 }
