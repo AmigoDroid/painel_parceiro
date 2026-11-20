@@ -19,9 +19,11 @@ export default function NetworkCharges(){
  const copy=async value=>{try{await navigator.clipboard.writeText(value);setCopyMsg('Copiado.')}catch{setCopyMsg('Não foi possível copiar automaticamente. Selecione o texto abaixo.')}};
  return <section><div className="heading"><h2>Renovações e upgrades da minha conta</h2><button className="outline" onClick={reload} disabled={busy}>Atualizar pagamentos</button></div>
  <p>As cobranças são registradas por quem administra sua rede. O acesso só é prorrogado depois da confirmação do recebimento.</p>
- {pricing&&<article className="servercard"><h3>Meu plano — condições da renovação</h3><p>{pricing.conditions}</p>
+ {pricing&&<article className="servercard"><h3>Meu plano{pricing.planName?` · ${pricing.planName}`:""} — condições da renovação</h3><p>{pricing.conditions}</p>
+   {pricing.renewalAvailable===false&&<p role="status"><strong>Plano reservado à administração.</strong> {pricing.reason}</p>}
+   {pricing.renewalAvailable!==false&&<>
    {pricing.breakdown?.earlyDiscountCents>0&&<strong>Antecipe o pagamento até {new Date(pricing.earlyDiscountDeadline).toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'})} e economize {money(pricing.breakdown.earlyDiscountCents)}: renovação por {money(pricing.amountCents)}.</strong>}
-   <div>Conta estimada hoje: {money(pricing.amountCents)}. O valor definitivo será confirmado antes de gerar uma cobrança.</div></article>}
+   <div>Conta estimada hoje: {money(pricing.amountCents)}. O valor definitivo será confirmado antes de gerar uma cobrança.</div></>}</article>}
  {error&&<div role="alert" className="alert">{error}</div>}{copyMsg&&<p role="status">{copyMsg}</p>}
  <div className="cards two-cols">{charges.map(c=>{
   const text=c.pixCode||c.checkoutUrl||'';
