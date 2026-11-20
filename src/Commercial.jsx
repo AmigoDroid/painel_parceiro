@@ -12,7 +12,7 @@ export function CommercialOverview(){
  const [data,setData]=useState(null),[plan,setPlan]=useState(null),[error,setError]=useState("");
  const load=useCallback(()=>Promise.all([api(BASE+"/commercial"),api(BASE+"/service-plan")]).then(([d,p])=>{setData(d);setPlan(p);setError("")}).catch(e=>setError(e.message)),[]);
  useEffect(()=>{void load()},[load]);
- return <div className="panel commerce"><div className="panelhead"><div><h2>Contrato e licenças</h2><p>Condições definidas pela administração da Delta TV</p></div><button className="outline" onClick={load}>Atualizar</button></div>
+ return <div className="panel commerce"><div className="panelhead"><div><h2>Contrato e licenças</h2><p>Condições definidas pelo seu Master</p></div><button className="outline" onClick={load}>Atualizar</button></div>
   {error&&<div className="alert">{error}</div>}
   {!data?<div className="empty">Carregando condições comerciais…</div>:<>
    <div className="commercial-stats">

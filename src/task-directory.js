@@ -4,6 +4,7 @@ export const TASKS = [
   {"label": "Cadastrar cliente", "route": "customers", "description": "Gerenciar clientes do parceiro", "keywords": ["novo", "cliente", "usuario", "cadastro"]},
   {"label": "Localizar TV", "route": "devices", "description": "Vínculos e ativações de dispositivos", "keywords": ["mac", "aparelho", "tv"]},
   {"label": "Diagnosticar TV offline", "route": "support", "description": "Identificar problemas da TV", "keywords": ["falha", "erro", "conexao", "suporte"]},
+  {"label": "Fazer upgrade de plano", "route": "plans", "description": "Planos superiores e pagamento seguro", "keywords": ["plano", "upgrade", "master", "melhorar"]},
   {"label": "Consultar licenças", "route": "licenses", "description": "Licenças e ativações do contrato", "keywords": ["licenca", "renovar", "ativar"]},
   {"label": "Criar código de parceria", "actionId":"code.create", "route": "codes", "description": "Códigos e configurações", "keywords": ["codigo", "tv", "ativacao"]},
   {"label": "Gerenciar links de conteúdo", "route": "servers", "description": "Cadastrar, editar e monitorar URLs em um só lugar", "keywords": ["link", "iptv", "origem", "base", "url"]},

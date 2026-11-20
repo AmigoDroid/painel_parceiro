@@ -16,11 +16,18 @@ export default function NetworkCharges(){
  const [charges,setCharges]=useState([]),[pricing,setPricing]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[copyMsg,setCopyMsg]=useState('');
  const reload=async()=>{setBusy(true);try{const res=await api('/partner/network-charges');setCharges(res.data||[]);try{setPricing(await api('/partner/network-charges/pricing'))}catch{setPricing(null)}setError('')}catch(e){setError(e.message)}finally{setBusy(false)}};
  useEffect(()=>{void reload()},[]);
+ // Atualiza a situação ao retornar do checkout e enquanto houver cobrança aguardando confirmação.
+ const hasPending=charges.some(c=>['creating','pending'].includes(c.status));
+ useEffect(()=>{if(!hasPending)return;
+  const refresh=()=>{if(!document.hidden)void reload()};
+  const timer=setInterval(refresh,20000);window.addEventListener('focus',refresh);
+  return()=>{clearInterval(timer);window.removeEventListener('focus',refresh)};
+ },[hasPending]);
  const copy=async value=>{try{await navigator.clipboard.writeText(value);setCopyMsg('Copiado.')}catch{setCopyMsg('Não foi possível copiar automaticamente. Selecione o texto abaixo.')}};
  return <section><div className="heading"><h2>Cobranças e pagamentos da minha conta</h2><button className="outline" onClick={reload} disabled={busy}>Atualizar pagamentos</button></div>
- <p>As cobranças são registradas por quem administra sua rede. O acesso só é prorrogado depois da confirmação do recebimento.</p>
+ <p>As cobranças são registradas pelo seu Master. O acesso só é prorrogado depois da confirmação do recebimento.</p>
  {pricing&&<article className="servercard"><h3>Meu plano{pricing.planName?` · ${pricing.planName}`:""} — condições da renovação</h3><p>{pricing.conditions}</p>
-   {pricing.renewalAvailable===false&&<p role="status"><strong>Plano reservado à administração.</strong> {pricing.reason}</p>}
+   {pricing.renewalAvailable===false&&<p role="status"><strong>Plano reservado ao Master.</strong> {pricing.reason}</p>}
    {pricing.renewalAvailable!==false&&<>
    {pricing.breakdown?.earlyDiscountCents>0&&<strong>Antecipe o pagamento até {new Date(pricing.earlyDiscountDeadline).toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'})} e economize {money(pricing.breakdown.earlyDiscountCents)}: renovação por {money(pricing.amountCents)}.</strong>}
    <div>Conta estimada hoje: {money(pricing.amountCents)}. O valor definitivo será confirmado antes de gerar uma cobrança.</div></>}</article>}

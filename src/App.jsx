@@ -10,6 +10,7 @@ import EasyStart, { EasyPageGuide } from "@deltatv/ui/EasyStart";
 import { useSimpleMode } from "@deltatv/ui/useSimpleMode";
 import { api,login,logout,getAuth } from "./api.js";
 import NetworkCharges from "./NetworkCharges.jsx";
+import PlanUpgrade from "./PlanUpgrade.jsx";
 import SupportCenter from "./SupportCenter.jsx";
 import TicketCenter from "./TicketCenter.jsx";
 import {CommercialOverview,PartnerDevices,CreditAllocationModal} from "./Commercial.jsx";
@@ -28,13 +29,13 @@ const NAV_GROUPS=[
  {label:"Visão geral",items:[["overview","Início","dashboard"]]},
  {label:"Pagamentos",items:[["billing","Faturas e pagamentos","receipt"],["credits","Créditos e extrato","coins"]]},
  {label:"Dispositivos",items:[["devices","Minhas TVs","monitor"],["customers","Clientes","users"],["support","Resolver problema da TV","activity"]]},
- {label:"Licenças",items:[["licenses","Licenças e ativações","shield"],["commercial","Contrato e licenças","wallet"]]},
+ {label:"Licenças",items:[["licenses","Licenças e ativações","shield"],["plans","Meu plano e upgrade","wallet"]]},
  {label:"Ativar aplicativo",items:[["codes","Códigos para ativar TVs","key"],["white-label","Meus aplicativos","download"],["web","Player Web","globe"],["downloads","Aplicativos","download"]]},
  {label:"Servidores e personalização",items:[["servers","Meus DNS","server"],["monitor","Saúde dos DNS","activity"],["studio","Estúdio Visual","monitor"]]},
  {label:"Minha conta",items:[["account","Minha conta","account"],["tickets","Central de Suporte","help"],["access","Histórico de login","history"],["notifications","Notificações","bell"],["help","Guias e tutoriais","help"]]},
 ];
 // Modo simples não pode esconder pagamentos, vigência ou acesso ao PlayerWeb.
-const SIMPLE_PARTNER = new Set(["overview", "support", "customers", "devices", "codes", "servers", "monitor", "notifications", "help", "tickets", "account", "billing", "commercial", "licenses", "web", "downloads"]);
+const SIMPLE_PARTNER = new Set(["overview", "support", "customers", "devices", "codes", "servers", "monitor", "notifications", "help", "tickets", "account", "billing", "plans", "licenses", "web", "downloads"]);
 const SCREEN_SUBTITLES={
  overview:"Acompanhe sua operação, códigos e infraestrutura em um só lugar.",
  customers:"Gerencie os clientes associados à sua parceria.",
@@ -48,7 +49,7 @@ const SCREEN_SUBTITLES={
  servers:"Configure e acompanhe seus servidores de conteúdo.",
  monitor:"Disponibilidade e latência dos servidores, em tempo real.",
  downloads:"Aprenda a instalar DeltaTV no Android, TV Box e Roku, e consulte links e códigos de download.",
- commercial:"Condições do contrato e capacidade disponível.",
+ plans:"Compare planos superiores e faça upgrade após confirmar o pagamento.",
  credits:"Acompanhe movimentações e saldos de créditos.",
  billing:"Consulte suas faturas e informações financeiras.",
  tickets:"Abra e acompanhe chamados para a DeltaTV.",
@@ -60,7 +61,8 @@ const SCREEN_SUBTITLES={
 const SCREEN_TITLES=Object.fromEntries(NAV_GROUPS.flatMap(g=>g.items.map(i=>[i[0],i[1]])));
 const PARTNER_ROUTES = new Set(Object.keys(SCREEN_TITLES));
 export const readPartnerRoute = (hash = window.location.hash) => {
- const id = hash.startsWith('#/') ? hash.slice(2).split('?')[0] : 'overview';
+ const raw = hash.startsWith('#/') ? hash.slice(2).split('?')[0] : 'overview';
+ const id = raw === 'commercial' ? 'plans' : raw;
  return PARTNER_ROUTES.has(id) ? id : 'overview';
 };
 
@@ -75,6 +77,11 @@ function PartnerPortalApp(){
  const [user,setUser]=useState((panelAllows("parceiro",getAuth()?.user)?getAuth().user:null)),[screen,setScreen]=useState(readPartnerRoute);
  const [simpleMode,setSimpleMode]=useSimpleMode("parceiro");
  const [studioApps,setStudioApps]=useState([]);
+ const [master,setMaster]=useState(null);
+ useEffect(()=>{if(!user)return;let live=true;
+  api('/partner/network-charges/master').then(m=>{if(live)setMaster(m)}).catch(()=>{if(live)setMaster(null)});
+  return()=>{live=false};
+ },[user?.id]);
  useEffect(()=>{if(!user || user.renewalOnly){setStudioApps([]);return;} let active=true;
   const fetchStudio=()=>api('/partner/white-label/appearance/eligible').then(r=>{if(active)setStudioApps(r.data||[])}).catch(()=>{if(active)setStudioApps([])});
   void fetchStudio();const timer=setInterval(fetchStudio,60000);
@@ -210,6 +217,7 @@ function PartnerPortalApp(){
      <div><h1>Meu plano</h1><p>Seu contrato venceu. As demais funções ficarão disponíveis após a renovação.</p></div>
      <button type="button" className="outline" onClick={signOut}>Sair</button>
     </div>
+    {master&&<p className="notice">Para dúvidas ou mudança para um plano inferior, fale com seu Master: <strong>{master.name}</strong>{master.phone&&<> · <a href={`tel:${master.phone.replace(/[^\d+]/g,'')}`}>{master.phone}</a></>}</p>}
     <NetworkCharges/>
    </section></main>;
  return <div className="shell">
@@ -217,6 +225,7 @@ function PartnerPortalApp(){
  <aside className={`aside ${mobileMenu?"mobile-open":""}`}>
   <div className="logo"><div className="brandico">D</div><div className="brandcopy">Delta TV<small>PORTAL DO PARCEIRO</small></div><button type="button" className="close mobile-close" aria-label="Fechar menu" onClick={()=>setMobileMenu(false)}><Icon name="x" size={20}/></button></div>
   
+ {master&&<div className="master-contact"><strong>Fale com seu Master</strong><span>{master.name}</span>{master.phone?<a href={`tel:${master.phone.replace(/[^\d+]/g,'')}`}>{master.phone}</a>:<small>Telefone não cadastrado. Solicite ao Master que atualize o perfil.</small>}</div>}
   <nav className="nav" aria-label="Navegação do parceiro">{NAV_GROUPS.map(group=><div key={group.label} className="partner-nav-group"><span className="partner-nav-label">{group.label}</span>{group.items.filter(([id])=>(id!=="studio"||studioApps.length>0)&&(
  !simpleMode||SIMPLE_PARTNER.has(id)||screen===id)).map(([id,name,ico])=><button type="button" className={screen===id?"active":""} aria-current={screen===id?"page":undefined} key={id} data-help-target={({overview:"home", account:"profile", "white-label":"apps", studio:"studio", servers:"servers", codes:"codes", devices:"devices", licenses:"licenses", billing:"billing", notifications:"notifications", help:"help"})[id] || undefined} onClick={()=>navigate(id)}><span className="nav-icon"><Icon name={ico} size={19}/></span><span className="nav-text">{name}</span>{id==="notifications"&&showBadge&&unread>0&&<b className="nav-count">{unread}</b>}{screen===id&&<Icon name="chevronRight" size={14} className="nav-chevron"/>}</button>)}</div>)}</nav>
   <div className="sidefoot"><span className={`side-status-dot ${data.monitorEnabled?"is-on":""}`}/><div><span>Monitoramento</span><b>{data.monitorEnabled?"Ativado":"Desativado"}</b></div></div>
@@ -251,7 +260,7 @@ function PartnerPortalApp(){
  {screen==="downloads"&&<AppDownloads/>}
  {screen==="account"&&<PartnerAccount/>}
  {screen==="monitor"&&<><div className="heading"><p>Estado e latência dos servidores da sua parceria. A consulta usa medições já coletadas pelo backend e não gera novas sondagens.</p><button className="outline" onClick={refresh}>Atualizar</button></div><div className="cards">{data.providers.map(s=><article className="servercard" key={s.id}><div className="between"><h3>{s.name}</h3><State health={s.health}/></div><p className="break">{s.baseUrl}</p><div className="two"><span>Latência</span><b>{s.health?.latencyMs!=null?`${s.health.latencyMs} ms`:"Sem medição"}</b></div><div className="two"><span>Disponibilidade HTTP (24h / 7d / 30d)</span><b>{['24h','7d','30d'].map(period => { const sample=s.availability?.[period]; return sample?.percent == null ? `— (${sample?.samples || 0} testes)` : `${sample.percent}% (${sample.samples} testes)`; }).join(' · ')}</b></div><div className="two"><span>Última verificação</span><b>{s.health?.lastCheckedAt?new Date(s.health.lastCheckedAt).toLocaleString("pt-BR"):"—"}</b></div>{s.health?.lastError&&<div className="errorline">{s.health.lastError}</div>}</article>)}{!data.providers.length&&<div className="empty">Nenhum servidor.</div>}</div></>}
- {screen==="commercial"&&<CommercialOverview/>}
+ {screen==="plans"&&<><CommercialOverview/><PlanUpgrade onPayment={()=>navigate("billing")}/></>}
  {screen==="devices"&&<PartnerDevices/>}
  {screen==="overview"&&<>
    {(!data.providers?.length || !data.totalCodes || data.providers?.some(p=>p.health?.state==="down"))&&
