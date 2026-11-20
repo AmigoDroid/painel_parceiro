@@ -1,0 +1,36 @@
+import { useEffect, useMemo, useState } from 'react';
+import { api } from './api.js';
+import { qrMatrix } from './qr.js';
+const money=n=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(n||0)/100);
+const status={pending:'Aguardando pagamento',paid:'Pago',cancelled:'Cancelado',expired:'Expirado',review:'Em conciliação',failed:'Falhou',creating:'Preparando'};
+function LocalQr({value}){
+ const matrix=useMemo(()=>{try{return value?qrMatrix(value):[]}catch{return []}},[value]);
+ const size=matrix.length;
+ if(!size)return <p role="alert">QR indisponível. Utilize o código de pagamento abaixo.</p>;
+ return <svg aria-label="Código QR de pagamento" role="img" viewBox={`-4 -4 ${size+8} ${size+8}`} width="220" height="220" style={{maxWidth:'100%',background:'#fff',padding:10}} shapeRendering="crispEdges">
+  <rect x={-4} y={-4} width={size+8} height={size+8} fill="#fff"/>
+  {matrix.flatMap((row,y)=>row.map((on,x)=>on?<rect key={`${x}-${y}`} x={x} y={y} width={1} height={1} fill="#000"/>:null))}
+ </svg>;
+}
+export default function NetworkCharges(){
+ const [charges,setCharges]=useState([]),[error,setError]=useState(''),[busy,setBusy]=useState(false),[copyMsg,setCopyMsg]=useState('');
+ const reload=async()=>{setBusy(true);try{const res=await api('/partner/network-charges');setCharges(res.data||[]);setError('')}catch(e){setError(e.message)}finally{setBusy(false)}};
+ useEffect(()=>{void reload()},[]);
+ const copy=async value=>{try{await navigator.clipboard.writeText(value);setCopyMsg('Copiado.')}catch{setCopyMsg('Não foi possível copiar automaticamente. Selecione o texto abaixo.')}};
+ return <section><div className="heading"><h2>Renovações e upgrades da minha conta</h2><button className="outline" onClick={reload} disabled={busy}>Atualizar pagamentos</button></div>
+ <p>As cobranças são registradas por quem administra sua rede. O acesso só é prorrogado depois da confirmação do recebimento.</p>
+ {error&&<div role="alert" className="alert">{error}</div>}{copyMsg&&<p role="status">{copyMsg}</p>}
+ <div className="cards two-cols">{charges.map(c=>{
+  const text=c.pixCode||c.checkoutUrl||'';
+  return <article className="servercard" key={c.id}><div className="between"><b>{c.kind==='renewal'?'Renovação':'Upgrade'} · {c.planTo}</b><span className="pill checking">{status[c.status]||c.status}</span></div>
+   <p><strong>{money(c.amountCents)}</strong></p><p>Vence em {new Date(c.expiresAt).toLocaleString('pt-BR')}</p>
+   {text&&<div style={{display:'grid',gap:12,justifyItems:'start'}}><LocalQr value={text}/><p>{c.pixCode?'Pix copia e cola':'QR do checkout seguro. O texto abaixo é um link, não um código Pix BR.'}</p>
+    <textarea className="break" aria-label={c.pixCode?'Pix copia e cola':'Link de pagamento'} value={text} readOnly rows={3} style={{width:'100%',maxWidth:430}}/>
+    <button className="primary" type="button" onClick={()=>copy(text)}>{c.pixCode?'Copiar Pix':'Copiar link de pagamento'}</button>
+    {c.checkoutUrl&&<a className="outline" href={c.checkoutUrl} target="_blank" rel="noopener noreferrer">Abrir pagamento</a>}
+   </div>}
+   {c.status==='pending'&&!text&&<p>Aguardando conferência manual pelo responsável da rede.</p>}
+  </article>})}</div>
+ {!charges.length&&!busy&&<p>Nenhuma renovação ou upgrade pendente.</p>}
+ </section>;
+}
