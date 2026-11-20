@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from './api.js';
 import { qrMatrix } from './qr.js';
 const money=n=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(n||0)/100);
-const status={pending:'Aguardando pagamento',paid:'Pago',cancelled:'Cancelado',expired:'Expirado',review:'Em conciliação',failed:'Falhou',creating:'Preparando'};
+const status={pending:'Aguardando pagamento',paid:'Pago',cancelled:'Cancelado',expired:'Expirado',review:'Em conciliação',failed:'Falhou',creating:'Preparando',needs_review:'Pagamento em conferência'};
 function LocalQr({value}){
  const matrix=useMemo(()=>{try{return value?qrMatrix(value):[]}catch{return []}},[value]);
  const size=matrix.length;
@@ -13,17 +13,28 @@ function LocalQr({value}){
  </svg>;
 }
 export default function NetworkCharges(){
- const [charges,setCharges]=useState([]),[error,setError]=useState(''),[busy,setBusy]=useState(false),[copyMsg,setCopyMsg]=useState('');
- const reload=async()=>{setBusy(true);try{const res=await api('/partner/network-charges');setCharges(res.data||[]);setError('')}catch(e){setError(e.message)}finally{setBusy(false)}};
+ const [charges,setCharges]=useState([]),[pricing,setPricing]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[copyMsg,setCopyMsg]=useState('');
+ const reload=async()=>{setBusy(true);try{const res=await api('/partner/network-charges');setCharges(res.data||[]);try{setPricing(await api('/partner/network-charges/pricing'))}catch{setPricing(null)}setError('')}catch(e){setError(e.message)}finally{setBusy(false)}};
  useEffect(()=>{void reload()},[]);
  const copy=async value=>{try{await navigator.clipboard.writeText(value);setCopyMsg('Copiado.')}catch{setCopyMsg('Não foi possível copiar automaticamente. Selecione o texto abaixo.')}};
  return <section><div className="heading"><h2>Renovações e upgrades da minha conta</h2><button className="outline" onClick={reload} disabled={busy}>Atualizar pagamentos</button></div>
  <p>As cobranças são registradas por quem administra sua rede. O acesso só é prorrogado depois da confirmação do recebimento.</p>
+ {pricing&&<article className="servercard"><h3>Meu plano — condições da renovação</h3><p>{pricing.conditions}</p>
+   {pricing.breakdown?.earlyDiscountCents>0&&<strong>Antecipe o pagamento até {new Date(pricing.earlyDiscountDeadline).toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'})} e economize {money(pricing.breakdown.earlyDiscountCents)}: renovação por {money(pricing.amountCents)}.</strong>}
+   <div>Conta estimada hoje: {money(pricing.amountCents)}. O valor definitivo será confirmado antes de gerar uma cobrança.</div></article>}
  {error&&<div role="alert" className="alert">{error}</div>}{copyMsg&&<p role="status">{copyMsg}</p>}
  <div className="cards two-cols">{charges.map(c=>{
   const text=c.pixCode||c.checkoutUrl||'';
   return <article className="servercard" key={c.id}><div className="between"><b>{c.kind==='renewal'?'Renovação':'Upgrade'} · {c.planTo}</b><span className="pill checking">{status[c.status]||c.status}</span></div>
-   <p><strong>{money(c.amountCents)}</strong></p><p>Vence em {new Date(c.expiresAt).toLocaleString('pt-BR')}</p>
+   <p><strong>{money(c.amountCents)}</strong></p>{c.breakdown?.totalCents>0&&<div aria-label="Composição da cobrança">
+    <div>Plano/base: {money(c.breakdown.baseCents)}</div>
+    {c.breakdown.earlyDiscountCents>0&&<div>Desconto antecipado: −{money(c.breakdown.earlyDiscountCents)}</div>}
+    {c.breakdown.manualDiscountCents>0&&<div>Desconto concedido: −{money(c.breakdown.manualDiscountCents)}</div>}
+    {c.breakdown.lateFeeCents>0&&<div>Multa {c.breakdown.lateFeePct}%: {money(c.breakdown.lateFeeCents)}</div>}
+    {c.breakdown.interestCents>0&&<div>Juros de {c.breakdown.daysLate} dia(s): {money(c.breakdown.interestCents)}</div>}
+    {(c.breakdown.waiverFeeCents+c.breakdown.waiverInterestCents)>0&&<div>Abono de encargos: −{money(c.breakdown.waiverFeeCents+c.breakdown.waiverInterestCents)}</div>}
+    <div><b>Total: {money(c.breakdown.totalCents)}</b></div></div>}
+   <p>Vence em {new Date(c.expiresAt).toLocaleString('pt-BR')}</p>
    {text&&<div style={{display:'grid',gap:12,justifyItems:'start'}}><LocalQr value={text}/><p>{c.pixCode?'Pix copia e cola':'QR do checkout seguro. O texto abaixo é um link, não um código Pix BR.'}</p>
     <textarea className="break" aria-label={c.pixCode?'Pix copia e cola':'Link de pagamento'} value={text} readOnly rows={3} style={{width:'100%',maxWidth:430}}/>
     <button className="primary" type="button" onClick={()=>copy(text)}>{c.pixCode?'Copiar Pix':'Copiar link de pagamento'}</button>

@@ -9,6 +9,7 @@ import "./operation-center.css";
 import EasyStart, { EasyPageGuide } from "@deltatv/ui/EasyStart";
 import { useSimpleMode } from "@deltatv/ui/useSimpleMode";
 import { api,login,logout,getAuth } from "./api.js";
+import NetworkCharges from "./NetworkCharges.jsx";
 import SupportCenter from "./SupportCenter.jsx";
 import TicketCenter from "./TicketCenter.jsx";
 import {CommercialOverview,PartnerDevices,CreditAllocationModal} from "./Commercial.jsx";
@@ -74,7 +75,7 @@ function PartnerPortalApp(){
  const [user,setUser]=useState((panelAllows("parceiro",getAuth()?.user)?getAuth().user:null)),[screen,setScreen]=useState(readPartnerRoute);
  const [simpleMode,setSimpleMode]=useSimpleMode("parceiro");
  const [studioApps,setStudioApps]=useState([]);
- useEffect(()=>{if(!user){setStudioApps([]);return;} let active=true;
+ useEffect(()=>{if(!user || user.renewalOnly){setStudioApps([]);return;} let active=true;
   const fetchStudio=()=>api('/partner/white-label/appearance/eligible').then(r=>{if(active)setStudioApps(r.data||[])}).catch(()=>{if(active)setStudioApps([])});
   void fetchStudio();const timer=setInterval(fetchStudio,60000);
   return()=>{active=false;clearInterval(timer)};
@@ -84,7 +85,7 @@ function PartnerPortalApp(){
  const [credentials,setCredentials]=useState({email:"",password:""});
  const [forgotMode,setForgotMode]=useState(false);
  const [profileDetails,setProfileDetails]=useState(null);
- useEffect(()=>{if(!user)return;let live=true;
+ useEffect(()=>{if(!user || user.renewalOnly)return;let live=true;
   api("/auth/profile").then(x=>{if(live)setProfileDetails(x)}).catch(()=>{});
   const updated=e=>setProfileDetails(e.detail);
   window.addEventListener("profile-updated",updated);
@@ -116,14 +117,14 @@ function PartnerPortalApp(){
  const [mobileMenu,setMobileMenu]=useState(false),[unread,setUnread]=useState(0),[profileMenu,setProfileMenu]=useState(false);
  // O tutorial de navegação abre o menu móvel para exibir o item real destacado.
  useEffect(()=>{const openForHelp=()=>setMobileMenu(true);window.addEventListener("deltatv-help-open-menu",openForHelp);return()=>window.removeEventListener("deltatv-help-open-menu",openForHelp)},[]);
- useEffect(()=>connectRealtime(),[]);
+ useEffect(()=>{if(user && !user.renewalOnly)connectRealtime()},[user?.id,user?.renewalOnly]);
  useEffect(()=>{const sync=()=>setUser((panelAllows("parceiro",getAuth()?.user)?getAuth().user:null));window.addEventListener("auth-changed",sync);return()=>window.removeEventListener("auth-changed",sync)},[]);
  useEffect(()=>{
   const onEscape=e=>{if(e.key==="Escape"){setProfileMenu(false);setMobileMenu(false)}};
   window.addEventListener("keydown",onEscape);
   return()=>window.removeEventListener("keydown",onEscape);
  },[]);
- useEffect(()=>{ if(!user)return;
+ useEffect(()=>{ if(!user || user.renewalOnly)return;
   let active=true;
   const run=()=>api(BASE+"/notifications",{query:{page:1,limit:1}}).then(r=>{if(active)setUnread(r.unread||0)}).catch(()=>{});
   const onChange=e=>{if(!e.detail?.topic || ["notifications","data"].includes(e.detail.topic) || e.detail?.type==="notification")run()};
@@ -156,7 +157,7 @@ function PartnerPortalApp(){
  const [codes,setCodes]=useState({rows:[],count:0,page:1,pageSize:25});
  const [codePage,setCodePage]=useState(1),[codeReload,setCodeReload]=useState(0);
  useEffect(() => {
-  if (!user || screen !== 'codes') return;
+  if (!user || user.renewalOnly || screen !== 'codes') return;
   const check = () => {
     try {
       const intent = JSON.parse(sessionStorage.getItem('deltatv.task-intent.v1') || 'null');
@@ -170,13 +171,13 @@ function PartnerPortalApp(){
  },[user?.id,screen,data.providers]);
 
  const refresh=useCallback(async()=>{if(!getAuth())return;try{const d=await api(BASE+"/overview");setData(d);setError("");}catch(e){setError(e.message)}},[]);
- useEffect(()=>{if(!user)return;void refresh();const id=setInterval(()=>{void refresh()},60000);
+ useEffect(()=>{if(!user || user.renewalOnly)return;void refresh();const id=setInterval(()=>{void refresh()},60000);
   let t;
   const onChange=e=>{if(["server-health","codes","providers","data"].includes(e.detail?.topic)){clearTimeout(t);t=setTimeout(()=>void refresh(),300)}};
   window.addEventListener("realtime-change",onChange);window.addEventListener("realtime-ready",onChange);
   return()=>{clearInterval(id);clearTimeout(t);window.removeEventListener("realtime-change",onChange);window.removeEventListener("realtime-ready",onChange)};
  },[user,refresh]);
- useEffect(()=>{if(!user||screen!=="codes")return;let cancelled=false;
+ useEffect(()=>{if(!user||user.renewalOnly||screen!=="codes")return;let cancelled=false;
   const id=setTimeout(async()=>{try{const d=await api(BASE+"/codes",{query:{q:search,page:codePage}});if(!cancelled)setCodes(d);}catch(e){if(!cancelled)setError(e.message)}},250);
   return()=>{cancelled=true;clearTimeout(id)};
  },[user,screen,search,codePage,codeReload]);
@@ -203,6 +204,14 @@ function PartnerPortalApp(){
  const visibleCodes=codes.rows;
  if(!user && forgotMode)return <ForgotPassword initialEmail={credentials.email} onBack={()=>{setForgotMode(false);setError("")}}/>;
  if(!user)return <main className="loginwrap"><form className="login" onSubmit={signIn}><div className="brandico brandico-login">D</div><h1>Delta TV <span>Parceiros</span></h1><p>Servidores, parcerias e disponibilidade em um só lugar.</p><label className="label">E-mail<input type="email" required autoComplete="username" value={credentials.email} onChange={e=>setCredentials({...credentials,email:e.target.value})} placeholder="seu@email.com"/></label><label className="label">Senha<input type="password" required autoComplete="current-password" value={credentials.password} onChange={e=>setCredentials({...credentials,password:e.target.value})} placeholder="••••••••"/></label>{error&&<div className="alert">{error}</div>}<button disabled={loading} className="primary wide">{loading?"Entrando…":"Entrar no painel"}</button><button type="button" className="reset-login-link" onClick={()=>{setForgotMode(true);setError("")}}>Esqueceu a senha?</button><small>Uso exclusivo dos parceiros de conteúdo Delta TV.</small></form></main>;
+ if (user.renewalOnly) return <main className="shell" style={{display:'block',minHeight:'100vh'}}>
+   <section className="main" style={{maxWidth:840,margin:'0 auto',padding:'20px 16px'}}>
+    <div className="between" style={{alignItems:'center',flexWrap:'wrap',gap:12}}>
+     <div><h1>Meu plano</h1><p>Seu contrato venceu. As demais funções ficarão disponíveis após a renovação.</p></div>
+     <button type="button" className="outline" onClick={signOut}>Sair</button>
+    </div>
+    <NetworkCharges/>
+   </section></main>;
  return <div className="shell">
  {mobileMenu&&<button className="partner-scrim" aria-label="Fechar navegação" onClick={()=>setMobileMenu(false)}/>}
  <aside className={`aside ${mobileMenu?"mobile-open":""}`}>
