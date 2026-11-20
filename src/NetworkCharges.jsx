@@ -27,7 +27,7 @@ export default function NetworkCharges(){
  {error&&<div role="alert" className="alert">{error}</div>}{copyMsg&&<p role="status">{copyMsg}</p>}
  <div className="cards two-cols">{charges.map(c=>{
   const text=c.pixCode||c.checkoutUrl||'';
-  return <article className="servercard" key={c.id}><div className="between"><b>{c.kind==='one_off'?`Cobrança avulsa · ${c.description||'Serviço adicional'}`:`${c.kind==='renewal'?'Renovação':'Upgrade'} · ${c.planTo}`}</b><span className="pill checking">{status[c.status]||c.status}</span></div>
+  return <article className="servercard" key={c.id}><div className="between"><b>{c.kind==='one_off'?`Cobrança avulsa · ${c.description||'Serviço adicional'}`:`${c.kind==='renewal'?'Renovação':'Upgrade'} · ${c.planTo}`}</b><span className={`pill ${c.status==='paid'?'active':'checking'}`}>{status[c.status]||c.status}</span></div>
    <p><strong>{money(c.amountCents)}</strong></p>{c.breakdown?.totalCents>0&&<div aria-label="Composição da cobrança">
     <div>{c.kind==='one_off'?'Serviço':'Plano/base'}: {money(c.breakdown.baseCents)}</div>
     {c.breakdown.earlyDiscountCents>0&&<div>Desconto antecipado: −{money(c.breakdown.earlyDiscountCents)}</div>}
