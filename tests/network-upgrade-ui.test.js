@@ -7,7 +7,7 @@ test('menu remove contrato duplicado e exibe meu plano e upgrade',()=>{
  assert.match(app,/\["licenses","Licenças e ativações","shield"\],\["plans","Meu plano e upgrade","wallet"\]/);
  assert.doesNotMatch(app,/\["commercial","Contrato e licenças"/);
  assert.match(app,/raw === 'commercial' \? 'plans'/);
- assert.match(app,/Fale com seu Master/);
+ assert.match(app,/<h2>Suporte<\/h2>/);
 });
 test('valor da prévia não pode ser informado livremente pelo parceiro',()=>{
  const upgrade=read('PlanUpgrade.jsx');
@@ -23,8 +23,11 @@ test('contato do Master fica na página inicial, fora do menu lateral',()=>{
  assert.match(app,/screen==="overview"&&master&&<section className="master-home-contact"/);
  assert.ok(app.indexOf('<AppInstallSpotlight')<app.indexOf('className="master-home-contact"'));
  assert.ok(app.indexOf('className="master-home-contact"')<app.indexOf('<EasyStart role="partner"'));
- assert.match(app,/master\.name\|\|'Master'/);
- assert.match(app,/master\.phone\|\|'Telefone ainda não cadastrado'/);
+ assert.match(app,/className="master-home-contact-heading"/);
+ assert.match(app,/<Icon name="headset" size=\{24\}\/>/);
+ assert.match(app,/<h2>Suporte<\/h2>/);
+ assert.doesNotMatch(app,/master-home-contact-info/);
+ assert.doesNotMatch(app,/<p>\{master\.phone/);
 });
 
 test('botão de WhatsApp só aparece para telefone brasileiro válido e abre endereço seguro',()=>{
@@ -35,6 +38,8 @@ test('botão de WhatsApp só aparece para telefone brasileiro válido e abre end
  assert.match(app,/href=\{`https:\/\/wa\.me\/\$\{masterWhatsapp\}`\}/);
  assert.match(app,/masterWhatsapp\?<a className="master-home-whatsapp"/);
  assert.match(app,/target="_blank" rel="noopener noreferrer"/);
- assert.match(css,/\.master-home-contact\{display:flex/);
+ assert.match(css,/\.master-home-contact\{display:flex;flex-direction:column/);
+ assert.match(css,/\.master-home-contact-heading\{display:flex;align-items:center/);
+ assert.match(css,/\.master-home-whatsapp\{display:inline-flex/);
  assert.match(css,/@media\(max-width:720px\)\{\.master-home-contact/);
 });

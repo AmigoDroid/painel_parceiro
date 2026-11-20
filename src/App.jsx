@@ -1,20 +1,34 @@
-import {Breadcrumb,PlatformBrand} from "../shared/PanelExperience.jsx";
+import { Breadcrumb, PlatformBrand } from "../shared/PanelExperience.jsx";
 import { panelAllows } from "../shared/permissions.js";
 import TaskFinder from "@deltatv/ui/TaskFinder";
 import AppInstallSpotlight from "@deltatv/ui/AppInstallSpotlight";
 import DeletionDialog from "./DeletionDialog.jsx";
 import { TASKS } from "./task-directory.js";
-import React,{useEffect,useState,useCallback} from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import "./operation-center.css";
 import EasyStart, { EasyPageGuide } from "@deltatv/ui/EasyStart";
 import { useSimpleMode } from "@deltatv/ui/useSimpleMode";
-import { api,login,logout,getAuth } from "./api.js";
+import { api, login, logout, getAuth } from "./api.js";
 import NetworkCharges from "./NetworkCharges.jsx";
 import PlanUpgrade from "./PlanUpgrade.jsx";
 import SupportCenter from "./SupportCenter.jsx";
 import TicketCenter from "./TicketCenter.jsx";
-import {CommercialOverview,PartnerDevices,CreditAllocationModal} from "./Commercial.jsx";
-import { Customers, LicensesAndActivations, Messages, AccessHistory, BillingHistory, AppDownloads, CreditsLedger, WebPlayer, PartnerAccount } from "./PartnerOperations.jsx";
+import {
+  CommercialOverview,
+  PartnerDevices,
+  CreditAllocationModal,
+} from "./Commercial.jsx";
+import {
+  Customers,
+  LicensesAndActivations,
+  Messages,
+  AccessHistory,
+  BillingHistory,
+  AppDownloads,
+  CreditsLedger,
+  WebPlayer,
+  PartnerAccount,
+} from "./PartnerOperations.jsx";
 import { connectRealtime } from "./realtime.js";
 import Icon from "./Icon.jsx";
 import WhiteLabelApps from "./WhiteLabelApps.jsx";
@@ -25,337 +39,1950 @@ import CommercialInviteRegistration from "./CommercialInviteRegistration.jsx";
 import { ForgotPassword } from "./PasswordReset.jsx";
 import "./password-reset.css";
 import { consumeInviteRequest } from "./invite-link.js";
-const NAV_GROUPS=[
- {label:"Visão geral",items:[["overview","Início","dashboard"]]},
- {label:"Pagamentos",items:[["billing","Faturas e pagamentos","receipt"],["credits","Créditos e extrato","coins"]]},
- {label:"Dispositivos",items:[["devices","Minhas TVs","monitor"],["customers","Clientes","users"],["support","Resolver problema da TV","activity"]]},
- {label:"Licenças",items:[["licenses","Licenças e ativações","shield"],["plans","Meu plano e upgrade","wallet"]]},
- {label:"Ativar aplicativo",items:[["codes","Códigos para ativar TVs","key"],["white-label","Meus aplicativos","download"],["web","Player Web","globe"],["downloads","Aplicativos","download"]]},
- {label:"Servidores e personalização",items:[["servers","Meus DNS","server"],["studio","Estúdio Visual","monitor"]]},
- {label:"Minha conta",items:[["account","Minha conta","account"],["tickets","Central de Suporte","help"],["access","Histórico de login","history"],["notifications","Notificações","bell"],["help","Guias e tutoriais","help"]]},
+const NAV_GROUPS = [
+  { label: "Visão geral", items: [["overview", "Início", "dashboard"]] },
+  {
+    label: "Pagamentos",
+    items: [
+      ["billing", "Faturas e pagamentos", "receipt"],
+      ["credits", "Créditos e extrato", "coins"],
+    ],
+  },
+  {
+    label: "Dispositivos",
+    items: [
+      ["devices", "Minhas TVs", "monitor"],
+      ["customers", "Clientes", "users"],
+      ["support", "Resolver problema da TV", "activity"],
+    ],
+  },
+  {
+    label: "Licenças",
+    items: [
+      ["licenses", "Licenças e ativações", "shield"],
+      ["plans", "Meu plano e upgrade", "wallet"],
+    ],
+  },
+  {
+    label: "Ativar aplicativo",
+    items: [
+      ["codes", "Códigos para ativar TVs", "key"],
+      ["white-label", "Meus aplicativos", "download"],
+      ["web", "Player Web", "globe"],
+      ["downloads", "Aplicativos", "download"],
+    ],
+  },
+  {
+    label: "Servidores e personalização",
+    items: [
+      ["servers", "Meus DNS", "server"],
+      ["studio", "Estúdio Visual", "monitor"],
+    ],
+  },
+  {
+    label: "Minha conta",
+    items: [
+      ["account", "Minha conta", "account"],
+      ["tickets", "Central de Suporte", "help"],
+      ["access", "Histórico de login", "history"],
+      ["notifications", "Notificações", "bell"],
+      ["help", "Guias e tutoriais", "help"],
+    ],
+  },
 ];
 // Modo simples não pode esconder pagamentos, vigência ou acesso ao PlayerWeb.
-const SIMPLE_PARTNER = new Set(["overview", "support", "customers", "devices", "codes", "servers", "notifications", "help", "tickets", "account", "billing", "plans", "licenses", "web", "downloads"]);
-const SCREEN_SUBTITLES={
- overview:"Acompanhe sua operação, códigos e infraestrutura em um só lugar.",
- customers:"Gerencie os clientes associados à sua parceria.",
- support:"Diagnóstico guiado da TV e orientações para resolver problemas.",
- devices:"Consulte seus dispositivos e os vínculos de ativação.",
- licenses:"Acompanhe licenças e ativações do seu contrato.",
- codes:"Organize os códigos de parceria e seus servidores.",
- web:"Gerencie o acesso ao Player Web dos seus clientes.",
- "white-label":"Controle seus aplicativos white-label, servidores e ativações.",
- studio:"Personalize o visual e publique novos temas para seus aplicativos Roku.",
- servers:"Configure e acompanhe seus servidores de conteúdo.",
- downloads:"Aprenda a instalar DeltaTV no Android, TV Box e Roku, e consulte links e códigos de download.",
- plans:"Compare os planos que seu Master disponibilizou e faça upgrade quando permitido.",
- credits:"Acompanhe movimentações e saldos de créditos.",
- billing:"Consulte suas faturas e informações financeiras.",
- tickets:"Abra e acompanhe chamados para a DeltaTV.",
- notifications:"Confira os comunicados enviados pela administração.",
- access:"Consulte o histórico de acesso e a segurança da conta.",
- account:"Atualize os dados e preferências da sua conta.",
- help:"Guias e tutoriais interativos para usar a plataforma."
+const SIMPLE_PARTNER = new Set([
+  "overview",
+  "support",
+  "customers",
+  "devices",
+  "codes",
+  "servers",
+  "notifications",
+  "help",
+  "tickets",
+  "account",
+  "billing",
+  "plans",
+  "licenses",
+  "web",
+  "downloads",
+]);
+const SCREEN_SUBTITLES = {
+  overview: "Acompanhe sua operação, códigos e infraestrutura em um só lugar.",
+  customers: "Gerencie os clientes associados à sua parceria.",
+  support: "Diagnóstico guiado da TV e orientações para resolver problemas.",
+  devices: "Consulte seus dispositivos e os vínculos de ativação.",
+  licenses: "Acompanhe licenças e ativações do seu contrato.",
+  codes: "Organize os códigos de parceria e seus servidores.",
+  web: "Gerencie o acesso ao Player Web dos seus clientes.",
+  "white-label":
+    "Controle seus aplicativos white-label, servidores e ativações.",
+  studio:
+    "Personalize o visual e publique novos temas para seus aplicativos Roku.",
+  servers: "Configure e acompanhe seus servidores de conteúdo.",
+  downloads:
+    "Aprenda a instalar DeltaTV no Android, TV Box e Roku, e consulte links e códigos de download.",
+  plans:
+    "Compare os planos que seu Master disponibilizou e faça upgrade quando permitido.",
+  credits: "Acompanhe movimentações e saldos de créditos.",
+  billing: "Consulte suas faturas e informações financeiras.",
+  tickets: "Abra e acompanhe chamados para a DeltaTV.",
+  notifications: "Confira os comunicados enviados pela administração.",
+  access: "Consulte o histórico de acesso e a segurança da conta.",
+  account: "Atualize os dados e preferências da sua conta.",
+  help: "Guias e tutoriais interativos para usar a plataforma.",
 };
-const SCREEN_TITLES=Object.fromEntries(NAV_GROUPS.flatMap(g=>g.items.map(i=>[i[0],i[1]])));
+const SCREEN_TITLES = Object.fromEntries(
+  NAV_GROUPS.flatMap((g) => g.items.map((i) => [i[0], i[1]])),
+);
 const PARTNER_ROUTES = new Set(Object.keys(SCREEN_TITLES));
 export const readPartnerRoute = (hash = window.location.hash) => {
- const raw = hash.startsWith('#/') ? hash.slice(2).split('?')[0] : 'overview';
- const id = raw === 'commercial' ? 'plans' : raw === 'monitor' ? 'servers' : raw;
- return PARTNER_ROUTES.has(id) ? id : 'overview';
+  const raw = hash.startsWith("#/") ? hash.slice(2).split("?")[0] : "overview";
+  const id =
+    raw === "commercial" ? "plans" : raw === "monitor" ? "servers" : raw;
+  return PARTNER_ROUTES.has(id) ? id : "overview";
 };
 
 // Importante: capturar apenas uma vez. React.StrictMode chama inicializadores duas
 // vezes em desenvolvimento; uma leitura destrutiva no useState perderia o convite.
 const INITIAL_INVITE = consumeInviteRequest();
-const BASE="/content-partner";
-const Label=({children})=><span className="label">{children}</span>;
-const healthNames={healthy:"Saudável",slow:"Lento",down:"Indisponível",suspect:"Falha detectada",checking:"Em verificação",unknown:"Aguardando"};
-function State({health}) { const state=health?.state||"unknown";return <span className={`pill ${state}`}>{healthNames[state]||state}</span> }
-function PartnerPortalApp(){
- const [user,setUser]=useState((panelAllows("parceiro",getAuth()?.user)?getAuth().user:null)),[screen,setScreen]=useState(readPartnerRoute);
- const [simpleMode,setSimpleMode]=useSimpleMode("parceiro");
- const [studioApps,setStudioApps]=useState([]);
- const [master,setMaster]=useState(null);
- useEffect(()=>{if(!user)return;let live=true;
-  api('/partner/network-charges/master').then(m=>{if(live)setMaster(m)}).catch(()=>{if(live)setMaster(null)});
-  return()=>{live=false};
- },[user?.id]);
- useEffect(()=>{if(!user || user.renewalOnly){setStudioApps([]);return;} let active=true;
-  const fetchStudio=()=>api('/partner/white-label/appearance/eligible').then(r=>{if(active)setStudioApps(r.data||[])}).catch(()=>{if(active)setStudioApps([])});
-  void fetchStudio();const timer=setInterval(fetchStudio,60000);
-  return()=>{active=false;clearInterval(timer)};
- },[user?.id]);
- const [data,setData]=useState({providers:[],codes:[],monitorEnabled:false}),[loading,setLoading]=useState(false),[error,setError]=useState("");
- const [saving,setSaving]=useState(false),[form,setForm]=useState(null),[codeForm,setCodeForm]=useState(null),[search,setSearch]=useState("");
- const [credentials,setCredentials]=useState({email:"",password:""});
- const [forgotMode,setForgotMode]=useState(false);
- const [profileDetails,setProfileDetails]=useState(null);
- useEffect(()=>{if(!user || user.renewalOnly)return;let live=true;
-  api("/auth/profile").then(x=>{if(live)setProfileDetails(x)}).catch(()=>{});
-  const updated=e=>setProfileDetails(e.detail);
-  window.addEventListener("profile-updated",updated);
-  return()=>{live=false;window.removeEventListener("profile-updated",updated)};
- },[user?.id]);
- const showBadge=profileDetails?.profile?.showNotificationBadge!==false;
- const showUnread=profileDetails?.profile?.showUnreadBanner!==false;
- const [poolForm,setPoolForm]=useState(null),[editCode,setEditCode]=useState(null);
- const [deleteItem,setDeleteItem]=useState(null);
- // Diálogos operacionais: foco inicial, Escape, ciclo de Tab e retorno ao botão anterior.
- const modalVisible=Boolean(form||codeForm||editCode);
- useEffect(()=>{
-  if(!modalVisible)return;
-  const previous=document.activeElement;
-  const modal=document.querySelector('.overlay .modal[role="dialog"]');
-  const focusable=()=>[...(modal?.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex="0"]')||[])];
-  focusable()[0]?.focus();
-  const onKey=e=>{
-   if(e.key==='Escape'){e.preventDefault();setForm(null);setCodeForm(null);setEditCode(null);return;}
-   if(e.key!=='Tab'||!modal)return;
-   const items=focusable(),first=items[0],last=items[items.length-1];if(!first)return;
-   if(e.shiftKey && document.activeElement===first){e.preventDefault();last.focus();}
-   else if(!e.shiftKey && document.activeElement===last){e.preventDefault();first.focus();}
-  };
-  document.addEventListener('keydown',onKey);
-  return()=>{document.removeEventListener('keydown',onKey);previous?.focus?.();};
- },[modalVisible]);
- const [allocation,setAllocation]=useState(null);
- const [mobileMenu,setMobileMenu]=useState(false),[unread,setUnread]=useState(0),[profileMenu,setProfileMenu]=useState(false);
- // O tutorial de navegação abre o menu móvel para exibir o item real destacado.
- useEffect(()=>{const openForHelp=()=>setMobileMenu(true);window.addEventListener("deltatv-help-open-menu",openForHelp);return()=>window.removeEventListener("deltatv-help-open-menu",openForHelp)},[]);
- useEffect(()=>{if(user && !user.renewalOnly)connectRealtime()},[user?.id,user?.renewalOnly]);
- useEffect(()=>{const sync=()=>setUser((panelAllows("parceiro",getAuth()?.user)?getAuth().user:null));window.addEventListener("auth-changed",sync);return()=>window.removeEventListener("auth-changed",sync)},[]);
- useEffect(()=>{
-  const onEscape=e=>{if(e.key==="Escape"){setProfileMenu(false);setMobileMenu(false)}};
-  window.addEventListener("keydown",onEscape);
-  return()=>window.removeEventListener("keydown",onEscape);
- },[]);
- useEffect(()=>{ if(!user || user.renewalOnly)return;
-  let active=true;
-  const run=()=>api(BASE+"/notifications",{query:{page:1,limit:1}}).then(r=>{if(active)setUnread(r.unread||0)}).catch(()=>{});
-  const onChange=e=>{if(!e.detail?.topic || ["notifications","data"].includes(e.detail.topic) || e.detail?.type==="notification")run()};
-  run();const timer=setInterval(run,60000);
-  window.addEventListener("realtime-ready",onChange);window.addEventListener("realtime-change",onChange);
-  return()=>{active=false;clearInterval(timer);window.removeEventListener("realtime-ready",onChange);window.removeEventListener("realtime-change",onChange)};
- },[user]);
- const navigate=useCallback(id=>{
-  if (!PARTNER_ROUTES.has(id) || (id === 'studio' && !studioApps.length)) return;
-  const hash = `#/${id}`;
-  if (window.location.hash !== hash) window.location.hash = hash;
-  setScreen(id);setForm(null);setMobileMenu(false);setProfileMenu(false);
- },[studioApps.length]);
- useEffect(() => {
-  const onHash = () => { const next = readPartnerRoute();
-   if(/^#\/monitor(?:\?|$)/.test(window.location.hash))window.history.replaceState(window.history.state,"","#/servers");
-   if(next === 'studio' && !studioApps.length) {navigate('overview');return;}
-   setScreen(next);setForm(null);setMobileMenu(false);setProfileMenu(false);
-  };
-  window.addEventListener('hashchange',onHash);
-  return () => window.removeEventListener('hashchange',onHash);
- },[navigate,studioApps.length]);
- useEffect(() => { if(user && window.location.hash !== `#/${screen}`) window.history.replaceState(window.history.state,'',`#/${screen}`); },[user?.id]);
- const [history,setHistory]=useState(null);
- const showHistory=async server=>{setHistory({name:server.name,loading:true,data:[],error:""});try{
-  const r=await api(`${BASE}/servers/${server.id}/history`);setHistory({name:server.name,loading:false,data:r.data||[],error:""});
- }catch(e){setHistory({name:server.name,loading:false,data:[],error:e.message})}};
- const maxCodeServers=data?.servicePlan?.features?.maxServers ?? null;
- const maxCodeServersLabel=maxCodeServers == null ? "um número ilimitado de" : `até ${maxCodeServers}`;
- const canPoolEdit=(maxCodeServers == null || maxCodeServers > 1) && !!data?.servicePlan?.features?.autoFailover;
- const [codes,setCodes]=useState({rows:[],count:0,page:1,pageSize:25});
- const [codePage,setCodePage]=useState(1),[codeReload,setCodeReload]=useState(0);
- useEffect(() => {
-  if (!user || user.renewalOnly || screen !== 'codes') return;
-  const check = () => {
+const BASE = "/content-partner";
+const Label = ({ children }) => <span className="label">{children}</span>;
+const healthNames = {
+  healthy: "Saudável",
+  slow: "Lento",
+  down: "Indisponível",
+  suspect: "Falha detectada",
+  checking: "Em verificação",
+  unknown: "Aguardando",
+};
+function State({ health }) {
+  const state = health?.state || "unknown";
+  return <span className={`pill ${state}`}>{healthNames[state] || state}</span>;
+}
+function PartnerPortalApp() {
+  const [user, setUser] = useState(
+      panelAllows("parceiro", getAuth()?.user) ? getAuth().user : null,
+    ),
+    [screen, setScreen] = useState(readPartnerRoute);
+  const [simpleMode, setSimpleMode] = useSimpleMode("parceiro");
+  const [studioApps, setStudioApps] = useState([]);
+  const [master, setMaster] = useState(null);
+  useEffect(() => {
+    if (!user) return;
+    let live = true;
+    api("/partner/network-charges/master")
+      .then((m) => {
+        if (live) setMaster(m);
+      })
+      .catch(() => {
+        if (live) setMaster(null);
+      });
+    return () => {
+      live = false;
+    };
+  }, [user?.id]);
+  useEffect(() => {
+    if (!user || user.renewalOnly) {
+      setStudioApps([]);
+      return;
+    }
+    let active = true;
+    const fetchStudio = () =>
+      api("/partner/white-label/appearance/eligible")
+        .then((r) => {
+          if (active) setStudioApps(r.data || []);
+        })
+        .catch(() => {
+          if (active) setStudioApps([]);
+        });
+    void fetchStudio();
+    const timer = setInterval(fetchStudio, 60000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [user?.id]);
+  const [data, setData] = useState({
+      providers: [],
+      codes: [],
+      monitorEnabled: false,
+    }),
+    [loading, setLoading] = useState(false),
+    [error, setError] = useState("");
+  const [saving, setSaving] = useState(false),
+    [form, setForm] = useState(null),
+    [codeForm, setCodeForm] = useState(null),
+    [search, setSearch] = useState("");
+  const [credentials, setCredentials] = useState({ email: "", password: "" });
+  const [forgotMode, setForgotMode] = useState(false);
+  const [profileDetails, setProfileDetails] = useState(null);
+  useEffect(() => {
+    if (!user || user.renewalOnly) return;
+    let live = true;
+    api("/auth/profile")
+      .then((x) => {
+        if (live) setProfileDetails(x);
+      })
+      .catch(() => {});
+    const updated = (e) => setProfileDetails(e.detail);
+    window.addEventListener("profile-updated", updated);
+    return () => {
+      live = false;
+      window.removeEventListener("profile-updated", updated);
+    };
+  }, [user?.id]);
+  const showBadge = profileDetails?.profile?.showNotificationBadge !== false;
+  const showUnread = profileDetails?.profile?.showUnreadBanner !== false;
+  const [poolForm, setPoolForm] = useState(null),
+    [editCode, setEditCode] = useState(null);
+  const [deleteItem, setDeleteItem] = useState(null);
+  // Diálogos operacionais: foco inicial, Escape, ciclo de Tab e retorno ao botão anterior.
+  const modalVisible = Boolean(form || codeForm || editCode);
+  useEffect(() => {
+    if (!modalVisible) return;
+    const previous = document.activeElement;
+    const modal = document.querySelector('.overlay .modal[role="dialog"]');
+    const focusable = () => [
+      ...(modal?.querySelectorAll(
+        'button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex="0"]',
+      ) || []),
+    ];
+    focusable()[0]?.focus();
+    const onKey = (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setForm(null);
+        setCodeForm(null);
+        setEditCode(null);
+        return;
+      }
+      if (e.key !== "Tab" || !modal) return;
+      const items = focusable(),
+        first = items[0],
+        last = items[items.length - 1];
+      if (!first) return;
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      previous?.focus?.();
+    };
+  }, [modalVisible]);
+  const [allocation, setAllocation] = useState(null);
+  const [mobileMenu, setMobileMenu] = useState(false),
+    [unread, setUnread] = useState(0),
+    [profileMenu, setProfileMenu] = useState(false);
+  // O tutorial de navegação abre o menu móvel para exibir o item real destacado.
+  useEffect(() => {
+    const openForHelp = () => setMobileMenu(true);
+    window.addEventListener("deltatv-help-open-menu", openForHelp);
+    return () =>
+      window.removeEventListener("deltatv-help-open-menu", openForHelp);
+  }, []);
+  useEffect(() => {
+    if (user && !user.renewalOnly) connectRealtime();
+  }, [user?.id, user?.renewalOnly]);
+  useEffect(() => {
+    const sync = () =>
+      setUser(panelAllows("parceiro", getAuth()?.user) ? getAuth().user : null);
+    window.addEventListener("auth-changed", sync);
+    return () => window.removeEventListener("auth-changed", sync);
+  }, []);
+  useEffect(() => {
+    const onEscape = (e) => {
+      if (e.key === "Escape") {
+        setProfileMenu(false);
+        setMobileMenu(false);
+      }
+    };
+    window.addEventListener("keydown", onEscape);
+    return () => window.removeEventListener("keydown", onEscape);
+  }, []);
+  useEffect(() => {
+    if (!user || user.renewalOnly) return;
+    let active = true;
+    const run = () =>
+      api(BASE + "/notifications", { query: { page: 1, limit: 1 } })
+        .then((r) => {
+          if (active) setUnread(r.unread || 0);
+        })
+        .catch(() => {});
+    const onChange = (e) => {
+      if (
+        !e.detail?.topic ||
+        ["notifications", "data"].includes(e.detail.topic) ||
+        e.detail?.type === "notification"
+      )
+        run();
+    };
+    run();
+    const timer = setInterval(run, 60000);
+    window.addEventListener("realtime-ready", onChange);
+    window.addEventListener("realtime-change", onChange);
+    return () => {
+      active = false;
+      clearInterval(timer);
+      window.removeEventListener("realtime-ready", onChange);
+      window.removeEventListener("realtime-change", onChange);
+    };
+  }, [user]);
+  const navigate = useCallback(
+    (id) => {
+      if (!PARTNER_ROUTES.has(id) || (id === "studio" && !studioApps.length))
+        return;
+      const hash = `#/${id}`;
+      if (window.location.hash !== hash) window.location.hash = hash;
+      setScreen(id);
+      setForm(null);
+      setMobileMenu(false);
+      setProfileMenu(false);
+    },
+    [studioApps.length],
+  );
+  useEffect(() => {
+    const onHash = () => {
+      const next = readPartnerRoute();
+      if (/^#\/monitor(?:\?|$)/.test(window.location.hash))
+        window.history.replaceState(window.history.state, "", "#/servers");
+      if (next === "studio" && !studioApps.length) {
+        navigate("overview");
+        return;
+      }
+      setScreen(next);
+      setForm(null);
+      setMobileMenu(false);
+      setProfileMenu(false);
+    };
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, [navigate, studioApps.length]);
+  useEffect(() => {
+    if (user && window.location.hash !== `#/${screen}`)
+      window.history.replaceState(window.history.state, "", `#/${screen}`);
+  }, [user?.id]);
+  const [history, setHistory] = useState(null);
+  const showHistory = async (server) => {
+    setHistory({ name: server.name, loading: true, data: [], error: "" });
     try {
-      const intent = JSON.parse(sessionStorage.getItem('deltatv.task-intent.v1') || 'null');
-      if (intent?.route !== 'codes' || intent?.actionId !== 'code.create' || Date.now() - intent.createdAt > 15000) return;
-      sessionStorage.removeItem('deltatv.task-intent.v1');
-      setCodeForm({code:'',label:'',providerId:data.providers.find(p=>p.status==='active')?.id||''});
-    } catch { /* no stored task */ }
+      const r = await api(`${BASE}/servers/${server.id}/history`);
+      setHistory({
+        name: server.name,
+        loading: false,
+        data: r.data || [],
+        error: "",
+      });
+    } catch (e) {
+      setHistory({
+        name: server.name,
+        loading: false,
+        data: [],
+        error: e.message,
+      });
+    }
   };
-  window.addEventListener('deltatv-task-intent',check);check();
-  return()=>window.removeEventListener('deltatv-task-intent',check);
- },[user?.id,screen,data.providers]);
+  const maxCodeServers = data?.servicePlan?.features?.maxServers ?? null;
+  const maxCodeServersLabel =
+    maxCodeServers == null ? "um número ilimitado de" : `até ${maxCodeServers}`;
+  const canPoolEdit =
+    (maxCodeServers == null || maxCodeServers > 1) &&
+    !!data?.servicePlan?.features?.autoFailover;
+  const [codes, setCodes] = useState({
+    rows: [],
+    count: 0,
+    page: 1,
+    pageSize: 25,
+  });
+  const [codePage, setCodePage] = useState(1),
+    [codeReload, setCodeReload] = useState(0);
+  useEffect(() => {
+    if (!user || user.renewalOnly || screen !== "codes") return;
+    const check = () => {
+      try {
+        const intent = JSON.parse(
+          sessionStorage.getItem("deltatv.task-intent.v1") || "null",
+        );
+        if (
+          intent?.route !== "codes" ||
+          intent?.actionId !== "code.create" ||
+          Date.now() - intent.createdAt > 15000
+        )
+          return;
+        sessionStorage.removeItem("deltatv.task-intent.v1");
+        setCodeForm({
+          code: "",
+          label: "",
+          providerId:
+            data.providers.find((p) => p.status === "active")?.id || "",
+        });
+      } catch {
+        /* no stored task */
+      }
+    };
+    window.addEventListener("deltatv-task-intent", check);
+    check();
+    return () => window.removeEventListener("deltatv-task-intent", check);
+  }, [user?.id, screen, data.providers]);
 
- const refresh=useCallback(async()=>{if(!getAuth())return;try{const d=await api(BASE+"/overview");setData(d);setError("");}catch(e){setError(e.message)}},[]);
- useEffect(()=>{if(!user || user.renewalOnly)return;void refresh();const id=setInterval(()=>{void refresh()},60000);
-  let t;
-  const onChange=e=>{if(["server-health","codes","providers","data"].includes(e.detail?.topic)){clearTimeout(t);t=setTimeout(()=>void refresh(),300)}};
-  window.addEventListener("realtime-change",onChange);window.addEventListener("realtime-ready",onChange);
-  return()=>{clearInterval(id);clearTimeout(t);window.removeEventListener("realtime-change",onChange);window.removeEventListener("realtime-ready",onChange)};
- },[user,refresh]);
- useEffect(()=>{if(!user||user.renewalOnly||screen!=="codes")return;let cancelled=false;
-  const id=setTimeout(async()=>{try{const d=await api(BASE+"/codes",{query:{q:search,page:codePage}});if(!cancelled)setCodes(d);}catch(e){if(!cancelled)setError(e.message)}},250);
-  return()=>{cancelled=true;clearTimeout(id)};
- },[user,screen,search,codePage,codeReload]);
- const reloadCodeList=()=>{setCodeReload(v=>v+1);void refresh()};
- const savePool=async e=>{e.preventDefault();if(!poolForm?.serverIds.length)return;
-  setSaving(true);setError("");try{await api(`${BASE}/codes/${poolForm.id}/servers`,{method:"PUT",body:{serverIds:poolForm.serverIds}});
-   setPoolForm(null);reloadCodeList();}catch(e){setError(e.message)}finally{setSaving(false)};
- };
- const toggleServer=(id)=>setPoolForm(current=>{
-   if(!current)return current;
-   const have=current.serverIds.includes(id);
-   return {...current,serverIds:have?current.serverIds.filter(x=>x!==id):(maxCodeServers == null || current.serverIds.length<maxCodeServers)?[...current.serverIds,id]:current.serverIds};
- });
- const signIn=async e=>{e.preventDefault();setLoading(true);setError("");try{await login(credentials.email,credentials.password);setUser(getAuth()?.user);setCredentials({email:"",password:""});}catch(e){setError(e.message)}finally{setLoading(false)}};
- const signOut=async()=>{setProfileMenu(false);await logout();setUser(null);setData({providers:[],codes:[],monitorEnabled:false})};
- const saveServer=async e=>{e.preventDefault();setSaving(true);setError("");try{const body={name:form.name,baseUrl:form.baseUrl,priority:Number(form.priority)||0,status:form.status};
- await api(BASE+(form.id?`/servers/${form.id}`:"/servers"),{method:form.id?"PATCH":"POST",body});setForm(null);await refresh();}catch(e){setError(e.message)}finally{setSaving(false)}};
- const createCode=async e=>{e.preventDefault();setSaving(true);setError("");try{await api(BASE+"/codes",{method:"POST",body:{code:codeForm.code||undefined,label:codeForm.label||undefined,providerId:codeForm.providerId}});setCodeForm(null);reloadCodeList()}catch(e){setError(e.message)}finally{setSaving(false)}};
- const saveCode=async e=>{e.preventDefault();setSaving(true);setError("");try{
-   await api(`${BASE}/codes/${editCode.id}`,{method:"PATCH",body:{label:editCode.label||"",maxActivations:editCode.maxActivations===""?null:Number(editCode.maxActivations),allowWebIssuance:!!editCode.allowWebIssuance,expiresAt:editCode.expiresAt?(editCode.originalExpiresAt&&new Intl.DateTimeFormat("en-CA",{timeZone:"America/Sao_Paulo"}).format(new Date(editCode.originalExpiresAt))===editCode.expiresAt?editCode.originalExpiresAt:new Date(`${editCode.expiresAt}T23:59:59-03:00`).toISOString()):null}});
-   setEditCode(null);reloadCodeList();
-  }catch(e){setError(e.message)}finally{setSaving(false)}};
- const revoke=async c=>{if(!window.confirm(`Revogar o código ${c.code}? Dispositivos já ativados permanecem ativos.`))return;try{await api(`${BASE}/codes/${c.id}/revoke`,{method:"POST"});reloadCodeList()}catch(e){setError(e.message)}};
- const visibleCodes=codes.rows;
- const masterDigits=String(master?.phone||'').replace(/\D/g,'');
- const masterWhatsapp=/^55\d{10,11}$/.test(masterDigits)?masterDigits:/^\d{10,11}$/.test(masterDigits)?`55${masterDigits}`:null;
- if(!user && forgotMode)return <ForgotPassword initialEmail={credentials.email} onBack={()=>{setForgotMode(false);setError("")}}/>;
- if(!user)return <main className="loginwrap"><form className="login" onSubmit={signIn}><div className="brandico brandico-login">D</div><h1>Delta TV <span>Parceiros</span></h1><p>Servidores, parcerias e disponibilidade em um só lugar.</p><label className="label">E-mail<input type="email" required autoComplete="username" value={credentials.email} onChange={e=>setCredentials({...credentials,email:e.target.value})} placeholder="seu@email.com"/></label><label className="label">Senha<input type="password" required autoComplete="current-password" value={credentials.password} onChange={e=>setCredentials({...credentials,password:e.target.value})} placeholder="••••••••"/></label>{error&&<div className="alert">{error}</div>}<button disabled={loading} className="primary wide">{loading?"Entrando…":"Entrar no painel"}</button><button type="button" className="reset-login-link" onClick={()=>{setForgotMode(true);setError("")}}>Esqueceu a senha?</button><small>Uso exclusivo dos parceiros de conteúdo Delta TV.</small></form></main>;
- if (user.renewalOnly) return <main className="shell" style={{display:'block',minHeight:'100vh'}}>
-   <section className="main" style={{maxWidth:840,margin:'0 auto',padding:'20px 16px'}}>
-    <div className="between" style={{alignItems:'center',flexWrap:'wrap',gap:12}}>
-     <div><h1>Meu plano</h1><p>Seu contrato venceu. As demais funções ficarão disponíveis após a renovação.</p></div>
-     <button type="button" className="outline" onClick={signOut}>Sair</button>
+  const refresh = useCallback(async () => {
+    if (!getAuth()) return;
+    try {
+      const d = await api(BASE + "/overview");
+      setData(d);
+      setError("");
+    } catch (e) {
+      setError(e.message);
+    }
+  }, []);
+  useEffect(() => {
+    if (!user || user.renewalOnly) return;
+    void refresh();
+    const id = setInterval(() => {
+      void refresh();
+    }, 60000);
+    let t;
+    const onChange = (e) => {
+      if (
+        ["server-health", "codes", "providers", "data"].includes(
+          e.detail?.topic,
+        )
+      ) {
+        clearTimeout(t);
+        t = setTimeout(() => void refresh(), 300);
+      }
+    };
+    window.addEventListener("realtime-change", onChange);
+    window.addEventListener("realtime-ready", onChange);
+    return () => {
+      clearInterval(id);
+      clearTimeout(t);
+      window.removeEventListener("realtime-change", onChange);
+      window.removeEventListener("realtime-ready", onChange);
+    };
+  }, [user, refresh]);
+  useEffect(() => {
+    if (!user || user.renewalOnly || screen !== "codes") return;
+    let cancelled = false;
+    const id = setTimeout(async () => {
+      try {
+        const d = await api(BASE + "/codes", {
+          query: { q: search, page: codePage },
+        });
+        if (!cancelled) setCodes(d);
+      } catch (e) {
+        if (!cancelled) setError(e.message);
+      }
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+    };
+  }, [user, screen, search, codePage, codeReload]);
+  const reloadCodeList = () => {
+    setCodeReload((v) => v + 1);
+    void refresh();
+  };
+  const savePool = async (e) => {
+    e.preventDefault();
+    if (!poolForm?.serverIds.length) return;
+    setSaving(true);
+    setError("");
+    try {
+      await api(`${BASE}/codes/${poolForm.id}/servers`, {
+        method: "PUT",
+        body: { serverIds: poolForm.serverIds },
+      });
+      setPoolForm(null);
+      reloadCodeList();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+  const toggleServer = (id) =>
+    setPoolForm((current) => {
+      if (!current) return current;
+      const have = current.serverIds.includes(id);
+      return {
+        ...current,
+        serverIds: have
+          ? current.serverIds.filter((x) => x !== id)
+          : maxCodeServers == null || current.serverIds.length < maxCodeServers
+            ? [...current.serverIds, id]
+            : current.serverIds,
+      };
+    });
+  const signIn = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      await login(credentials.email, credentials.password);
+      setUser(getAuth()?.user);
+      setCredentials({ email: "", password: "" });
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  const signOut = async () => {
+    setProfileMenu(false);
+    await logout();
+    setUser(null);
+    setData({ providers: [], codes: [], monitorEnabled: false });
+  };
+  const saveServer = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setError("");
+    try {
+      const body = {
+        name: form.name,
+        baseUrl: form.baseUrl,
+        priority: Number(form.priority) || 0,
+        status: form.status,
+      };
+      await api(BASE + (form.id ? `/servers/${form.id}` : "/servers"), {
+        method: form.id ? "PATCH" : "POST",
+        body,
+      });
+      setForm(null);
+      await refresh();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+  const createCode = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setError("");
+    try {
+      await api(BASE + "/codes", {
+        method: "POST",
+        body: {
+          code: codeForm.code || undefined,
+          label: codeForm.label || undefined,
+          providerId: codeForm.providerId,
+        },
+      });
+      setCodeForm(null);
+      reloadCodeList();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+  const saveCode = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setError("");
+    try {
+      await api(`${BASE}/codes/${editCode.id}`, {
+        method: "PATCH",
+        body: {
+          label: editCode.label || "",
+          maxActivations:
+            editCode.maxActivations === ""
+              ? null
+              : Number(editCode.maxActivations),
+          allowWebIssuance: !!editCode.allowWebIssuance,
+          expiresAt: editCode.expiresAt
+            ? editCode.originalExpiresAt &&
+              new Intl.DateTimeFormat("en-CA", {
+                timeZone: "America/Sao_Paulo",
+              }).format(new Date(editCode.originalExpiresAt)) ===
+                editCode.expiresAt
+              ? editCode.originalExpiresAt
+              : new Date(`${editCode.expiresAt}T23:59:59-03:00`).toISOString()
+            : null,
+        },
+      });
+      setEditCode(null);
+      reloadCodeList();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+  const revoke = async (c) => {
+    if (
+      !window.confirm(
+        `Revogar o código ${c.code}? Dispositivos já ativados permanecem ativos.`,
+      )
+    )
+      return;
+    try {
+      await api(`${BASE}/codes/${c.id}/revoke`, { method: "POST" });
+      reloadCodeList();
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+  const visibleCodes = codes.rows;
+  const masterDigits = String(master?.phone || "").replace(/\D/g, "");
+  const masterWhatsapp = /^55\d{10,11}$/.test(masterDigits)
+    ? masterDigits
+    : /^\d{10,11}$/.test(masterDigits)
+      ? `55${masterDigits}`
+      : null;
+  if (!user && forgotMode)
+    return (
+      <ForgotPassword
+        initialEmail={credentials.email}
+        onBack={() => {
+          setForgotMode(false);
+          setError("");
+        }}
+      />
+    );
+  if (!user)
+    return (
+      <main className="loginwrap">
+        <form className="login" onSubmit={signIn}>
+          <div className="brandico brandico-login">D</div>
+          <h1>
+            Delta TV <span>Parceiros</span>
+          </h1>
+          <p>Servidores, parcerias e disponibilidade em um só lugar.</p>
+          <label className="label">
+            E-mail
+            <input
+              type="email"
+              required
+              autoComplete="username"
+              value={credentials.email}
+              onChange={(e) =>
+                setCredentials({ ...credentials, email: e.target.value })
+              }
+              placeholder="seu@email.com"
+            />
+          </label>
+          <label className="label">
+            Senha
+            <input
+              type="password"
+              required
+              autoComplete="current-password"
+              value={credentials.password}
+              onChange={(e) =>
+                setCredentials({ ...credentials, password: e.target.value })
+              }
+              placeholder="••••••••"
+            />
+          </label>
+          {error && <div className="alert">{error}</div>}
+          <button disabled={loading} className="primary wide">
+            {loading ? "Entrando…" : "Entrar no painel"}
+          </button>
+          <button
+            type="button"
+            className="reset-login-link"
+            onClick={() => {
+              setForgotMode(true);
+              setError("");
+            }}
+          >
+            Esqueceu a senha?
+          </button>
+          <small>Uso exclusivo dos parceiros de conteúdo Delta TV.</small>
+        </form>
+      </main>
+    );
+  if (user.renewalOnly)
+    return (
+      <main className="shell" style={{ display: "block", minHeight: "100vh" }}>
+        <section
+          className="main"
+          style={{ maxWidth: 840, margin: "0 auto", padding: "20px 16px" }}
+        >
+          <div
+            className="between"
+            style={{ alignItems: "center", flexWrap: "wrap", gap: 12 }}
+          >
+            <div>
+              <h1>Meu plano</h1>
+              <p>
+                Seu contrato venceu. As demais funções ficarão disponíveis após
+                a renovação.
+              </p>
+            </div>
+            <button type="button" className="outline" onClick={signOut}>
+              Sair
+            </button>
+          </div>
+          {master && (
+            <p className="notice">
+              Para dúvidas ou mudança para um plano inferior, fale com seu
+              Master: <strong>{master.name}</strong>
+              {master.phone && (
+                <>
+                  {" "}
+                  ·{" "}
+                  <a href={`tel:${master.phone.replace(/[^\d+]/g, "")}`}>
+                    {master.phone}
+                  </a>
+                </>
+              )}
+            </p>
+          )}
+          <NetworkCharges />
+        </section>
+      </main>
+    );
+  return (
+    <div className="shell">
+      {mobileMenu && (
+        <button
+          className="partner-scrim"
+          aria-label="Fechar navegação"
+          onClick={() => setMobileMenu(false)}
+        />
+      )}
+      <aside className={`aside ${mobileMenu ? "mobile-open" : ""}`}>
+        <div className="logo">
+          <div className="brandico">D</div>
+          <div className="brandcopy">
+            Delta TV<small>PORTAL DO PARCEIRO</small>
+          </div>
+          <button
+            type="button"
+            className="close mobile-close"
+            aria-label="Fechar menu"
+            onClick={() => setMobileMenu(false)}
+          >
+            <Icon name="x" size={20} />
+          </button>
+        </div>
+
+        <nav className="nav" aria-label="Navegação do parceiro">
+          {NAV_GROUPS.map((group) => (
+            <div key={group.label} className="partner-nav-group">
+              <span className="partner-nav-label">{group.label}</span>
+              {group.items
+                .filter(
+                  ([id]) =>
+                    (id !== "studio" || studioApps.length > 0) &&
+                    (!simpleMode || SIMPLE_PARTNER.has(id) || screen === id),
+                )
+                .map(([id, name, ico]) => (
+                  <button
+                    type="button"
+                    className={screen === id ? "active" : ""}
+                    aria-current={screen === id ? "page" : undefined}
+                    key={id}
+                    data-help-target={
+                      {
+                        overview: "home",
+                        account: "profile",
+                        "white-label": "apps",
+                        studio: "studio",
+                        servers: "servers",
+                        codes: "codes",
+                        devices: "devices",
+                        licenses: "licenses",
+                        billing: "billing",
+                        notifications: "notifications",
+                        help: "help",
+                      }[id] || undefined
+                    }
+                    onClick={() => navigate(id)}
+                  >
+                    <span className="nav-icon">
+                      <Icon name={ico} size={19} />
+                    </span>
+                    <span className="nav-text">{name}</span>
+                    {id === "notifications" && showBadge && unread > 0 && (
+                      <b className="nav-count">{unread}</b>
+                    )}
+                    {screen === id && (
+                      <Icon
+                        name="chevronRight"
+                        size={14}
+                        className="nav-chevron"
+                      />
+                    )}
+                  </button>
+                ))}
+            </div>
+          ))}
+        </nav>
+        <div className="sidefoot">
+          <span
+            className={`side-status-dot ${data.monitorEnabled ? "is-on" : ""}`}
+          />
+          <div>
+            <span>Monitoramento</span>
+            <b>{data.monitorEnabled ? "Ativado" : "Desativado"}</b>
+          </div>
+        </div>
+      </aside>
+      <section className="main">
+        <div style={{ padding: "14px 22px 0" }}>
+          <TaskFinder
+            tasks={TASKS.filter(
+              (task) => task.route !== "studio" || studioApps.length > 0,
+            )}
+            onNavigate={navigate}
+          />
+        </div>
+        <header className="app-header">
+          <div className="header-left">
+            <button
+              type="button"
+              className="partner-menu"
+              aria-label="Abrir menu"
+              onClick={() => setMobileMenu(true)}
+            >
+              <Icon name="menu" size={21} />
+            </button>
+            <div className="page-heading">
+              <div className="eyebrow">
+                <span className="eyebrow-dot" />
+                {data.servicePlan?.features?.label || "PARCEIRO DE CONTEÚDO"}
+              </div>
+              <h1>{SCREEN_TITLES[screen] || "Painel do parceiro"}</h1>
+              <p className="page-subtitle">
+                {SCREEN_SUBTITLES[screen] || "Gerencie sua parceria"}
+              </p>
+            </div>
+          </div>
+          <div className="topright">
+            <button
+              type="button"
+              className="easy-mode-button"
+              aria-pressed={!simpleMode}
+              onClick={() => setSimpleMode((v) => !v)}
+            >
+              {simpleMode
+                ? "Modo simples · mostrar tudo"
+                : "Modo completo · simplificar"}
+            </button>
+            <button
+              type="button"
+              className="header-refresh"
+              data-help-target="context-help"
+              onClick={() =>
+                window.dispatchEvent(
+                  new CustomEvent("deltatv-help-context", {
+                    detail: { screen },
+                  }),
+                )
+              }
+            >
+              ? Ajuda
+            </button>
+            <button
+              type="button"
+              className="header-refresh"
+              onClick={refresh}
+              title="Atualizar informações"
+            >
+              <Icon name="refresh" size={18} />
+              <span>Atualizar</span>
+            </button>
+            <button
+              type="button"
+              className="header-notifications"
+              aria-label={`Notificações${unread ? ` (${unread} não lidas)` : ""}`}
+              onClick={() => navigate("notifications")}
+            >
+              <Icon name="bell" size={19} />
+              {showBadge && unread > 0 && <span className="notif-dot" />}
+            </button>
+            <div className="profile-wrap">
+              <button
+                type="button"
+                className="profile-trigger"
+                aria-haspopup="menu"
+                aria-expanded={profileMenu}
+                onClick={() => setProfileMenu((v) => !v)}
+              >
+                <span className="avatar">
+                  {profileDetails?.profile?.avatarData ? (
+                    <img
+                      src={profileDetails.profile.avatarData}
+                      className="profile-menu-avatar"
+                      alt=""
+                    />
+                  ) : (
+                    (user.name || user.email || "P")[0].toUpperCase()
+                  )}
+                </span>
+                <span className="profile-identity">
+                  <b>{user.name || "Parceiro"}</b>
+                  <small>Minha conta</small>
+                </span>
+                <Icon name="chevron" size={16} />
+              </button>
+              {profileMenu && (
+                <>
+                  <button
+                    type="button"
+                    className="profile-dismiss"
+                    aria-label="Fechar menu da conta"
+                    onClick={() => setProfileMenu(false)}
+                  />
+                  <div className="profile-popover" role="menu">
+                    <div className="profile-popover-title">
+                      <b>{user.name || "Parceiro"}</b>
+                      <span>{user.email || "Conta de parceiro"}</span>
+                    </div>
+                    <button role="menuitem" onClick={() => navigate("account")}>
+                      <Icon name="account" size={17} /> Meu perfil
+                    </button>
+                    <button
+                      role="menuitem"
+                      className="logout-item"
+                      onClick={signOut}
+                    >
+                      <Icon name="logout" size={17} /> Sair da conta
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </header>
+        <div className="body">
+          <Breadcrumb
+            panel="parceiro"
+            current={SCREEN_TITLES[screen] || "Início"}
+            onHome={() => navigate("overview")}
+          />
+          {simpleMode && screen !== "overview" && (
+            <EasyPageGuide
+              role="partner"
+              page={screen}
+              onBack={() => navigate("overview")}
+            />
+          )}
+          <HelpExperience
+            screen={screen}
+            portal="content"
+            userId={user.id}
+            onNavigate={navigate}
+          />
+          {screen === "overview" && (
+            <AppInstallSpotlight onOpen={() => navigate("downloads")} />
+          )}
+          {screen === "overview" && master && (
+            <section
+              className="master-home-contact"
+              aria-label="Suporte do Master"
+            >
+              <div className="master-home-contact-heading">
+                <span className="master-home-contact-symbol">
+                  <Icon name="headset" size={24} />
+                </span>
+                <h2>Contate o Suporte</h2>
+              </div>
+              {masterWhatsapp ? (
+                <a
+                  className="master-home-whatsapp"
+                  href={`https://wa.me/${masterWhatsapp}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Chamar ${master.name || "Master"} no WhatsApp`}
+                >
+                  Chamar Suporte <Icon name="arrow" size={18} />
+                </a>
+              ) : (
+                <small className="master-home-contact-empty">
+                  Contato do Master ainda não configurado.
+                </small>
+              )}
+            </section>
+          )}
+          {screen === "overview" && (
+            <EasyStart role="partner" onNavigate={navigate} />
+          )}
+          {screen === "overview" && (
+            <section
+              className="panel"
+              style={{ marginTop: 16, padding: 18, display: "grid", gap: 10 }}
+            >
+              <h3>Minha central de gerenciamento</h3>
+              <p className="muted">
+                Acesse os dispositivos, DNS, suporte e recursos operacionais da
+                sua parceria.
+              </p>
+              <div style={{ display: "flex", gap: 9, flexWrap: "wrap" }}>
+                {[
+                  ["tickets", "Central de Suporte"],
+                  ["servers", "Meus DNS"],
+                  ["devices", "Dispositivos"],
+                ].map(([route, label]) => (
+                  <button
+                    type="button"
+                    key={route}
+                    className="outline"
+                    onClick={() => navigate(route)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+          {error && <div className="alert">{error}</div>}
+          {showUnread && unread > 0 && screen !== "notifications" && (
+            <div className="partner-unread" role="status">
+              <span className="alert-content">
+                <Icon name="bell" size={20} /> Você tem{" "}
+                <b>{unread} comunicado(s) não lido(s)</b> da Delta TV.
+              </span>
+              <button
+                className="primary"
+                onClick={() => navigate("notifications")}
+              >
+                Ver mensagens
+              </button>
+            </div>
+          )}
+          {data.providers.some((p) =>
+            ["slow", "suspect", "down"].includes(p.health?.state),
+          ) &&
+            screen !== "servers" && (
+              <div className="partner-alert" role="status">
+                <span className="alert-content">
+                  <Icon name="alert" size={20} /> Há servidores da sua parceria
+                  com lentidão ou indisponibilidade.
+                </span>
+                <button className="outline" onClick={() => navigate("servers")}>
+                  Ver monitoramento
+                </button>
+              </div>
+            )}
+          {!data.monitorEnabled && ["overview", "servers"].includes(screen) && (
+            <div className="notice">
+              O monitor automático está desligado. Solicite à DeltaTV a ativação
+              do monitoramento.
+            </div>
+          )}
+          {screen === "support" && <SupportCenter base="/partner" />}
+          {screen === "customers" && <Customers />}
+          {screen === "licenses" && <LicensesAndActivations />}
+          {screen === "web" && <WebPlayer />}
+          {screen === "white-label" && <WhiteLabelApps />}
+          {screen === "studio" && studioApps.length > 0 && (
+            <AppearanceStudio apps={studioApps} />
+          )}
+          {screen === "credits" && <CreditsLedger />}
+          {screen === "notifications" && <Messages onUnread={setUnread} />}
+          {screen === "access" && <AccessHistory />}
+          {screen === "billing" && <BillingHistory />}
+          {screen === "tickets" && <TicketCenter />}
+          {screen === "downloads" && <AppDownloads />}
+          {screen === "account" && <PartnerAccount />}
+          {screen === "plans" && (
+            <PlanUpgrade
+              master={master}
+              onPayment={() => navigate("billing")}
+            />
+          )}
+          {screen === "devices" && <PartnerDevices />}
+          {screen === "overview" && (
+            <>
+              {(!data.providers?.length ||
+                !data.totalCodes ||
+                data.providers?.some((p) => p.health?.state === "down")) && (
+                <section
+                  className="panel"
+                  aria-label="Próxima ação"
+                  style={{ padding: 18, marginBottom: 14 }}
+                >
+                  <h2>Próxima ação</h2>
+                  {!data.providers?.length ? (
+                    <p>
+                      Configure seu primeiro DNS para começar a utilizar os
+                      códigos.
+                    </p>
+                  ) : !data.totalCodes ? (
+                    <p>
+                      Seu DNS está cadastrado. Agora crie um código para ativar
+                      os aplicativos.
+                    </p>
+                  ) : (
+                    <p>
+                      Existe um DNS com falha. Consulte o monitoramento para
+                      identificar o problema.
+                    </p>
+                  )}
+                  <button
+                    className="primary"
+                    onClick={() =>
+                      navigate(
+                        !data.providers?.length
+                          ? "servers"
+                          : !data.totalCodes
+                            ? "codes"
+                            : "servers",
+                      )
+                    }
+                  >
+                    {!data.providers?.length
+                      ? "Configurar DNS"
+                      : !data.totalCodes
+                        ? "Criar código"
+                        : "Ver DNS com falha"}
+                  </button>
+                </section>
+              )}
+              <CommercialOverview />
+              <div className="stats">
+                <div className="stat">
+                  <small>Servidores cadastrados</small>
+                  <strong>{data.providers.length}</strong>
+                  <span>Da sua parceria</span>
+                </div>
+                <div className="stat">
+                  <small>Servidores saudáveis</small>
+                  <strong className="green">
+                    {
+                      data.providers.filter(
+                        (p) => p.health?.state === "healthy",
+                      ).length
+                    }
+                  </strong>
+                  <span>Verificados pelo monitor</span>
+                </div>
+                <div className="stat">
+                  <small>Em falha</small>
+                  <strong className="red">
+                    {
+                      data.providers.filter((p) => p.health?.state === "down")
+                        .length
+                    }
+                  </strong>
+                  <span>Falhas confirmadas</span>
+                </div>
+                <div className="stat">
+                  <small>Códigos de parceria</small>
+                  <strong>{data.totalCodes ?? 0}</strong>
+                  <span>Consulta paginada</span>
+                </div>
+              </div>
+              <div className="panel">
+                <div className="panelhead">
+                  <div>
+                    <h2>Saúde dos DNS</h2>
+                    <p>Tempo de resposta e disponibilidade</p>
+                  </div>
+                  <button onClick={() => navigate("servers")}>
+                    Ver servidores
+                  </button>
+                </div>
+                <div className="entries">
+                  {data.providers.map((s) => (
+                    <div className="entry" key={s.id}>
+                      <div
+                        className={`serverdot ${s.health?.state || "unknown"}`}
+                      />
+                      <div className="grow">
+                        <b>{s.name}</b>
+                        <small className="break">{s.baseUrl}</small>
+                      </div>
+                      <div className="latency">
+                        {s.health?.latencyMs != null
+                          ? `${s.health.latencyMs} ms`
+                          : "—"}
+                      </div>
+                      <State health={s.health} />
+                    </div>
+                  ))}
+                  {!data.providers.length && (
+                    <div className="empty">
+                      Nenhum DNS cadastrado. Adicione o primeiro DNS para
+                      conectar seus códigos.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+          {screen === "servers" && (
+            <>
+              <div className="heading">
+                <p>
+                  Cadastre DNS alternativos e monitore a resposta de cada
+                  servidor. Não confunda disponibilidade HTTP com reprodução
+                  garantida.
+                </p>
+                <button
+                  className="primary"
+                  data-help-target="add-server"
+                  onClick={() =>
+                    setForm({
+                      name: "",
+                      baseUrl: "",
+                      priority: 0,
+                      status: "active",
+                    })
+                  }
+                >
+                  + Adicionar DNS
+                </button>
+              </div>
+              <div className="cards">
+                {data.providers.map((s) => (
+                  <article className="servercard" key={s.id}>
+                    <div className="between">
+                      <div className="iconglow">
+                        <Icon name="server" size={22} />
+                      </div>
+                      <State health={s.health} />
+                    </div>
+                    <h3>{s.name}</h3>
+                    <p className="break">{s.baseUrl}</p>
+                    <div className="two">
+                      <span>Latência</span>
+                      <b>
+                        {s.health?.latencyMs != null
+                          ? `${s.health.latencyMs} ms`
+                          : "—"}
+                      </b>
+                    </div>
+                    <div className="two">
+                      <span>Prioridade configurada</span>
+                      <b>{s.priority}</b>
+                    </div>
+                    <div className="two">
+                      <span>Prioridade em tempo real</span>
+                      <b>
+                        #{s.effectivePriority || "—"}{" "}
+                        {data.autoPriority ? "(automática)" : "(manual)"}
+                      </b>
+                    </div>
+                    <div className="two">
+                      <span>Disponibilidade HTTP (24h / 7d / 30d)</span>
+                      <b>
+                        {["24h", "7d", "30d"]
+                          .map((period) => {
+                            const sample = s.availability?.[period];
+                            return sample?.percent == null
+                              ? `— (${sample?.samples || 0} testes)`
+                              : `${sample.percent}% (${sample.samples} testes)`;
+                          })
+                          .join(" · ")}
+                      </b>
+                    </div>
+                    <div className="two">
+                      <span>Última verificação</span>
+                      <b>
+                        {s.health?.lastCheckedAt
+                          ? new Date(s.health.lastCheckedAt).toLocaleString(
+                              "pt-BR",
+                            )
+                          : "—"}
+                      </b>
+                    </div>
+                    {s.health?.lastError && (
+                      <div className="errorline">{s.health.lastError}</div>
+                    )}
+                    <button className="outline wide" onClick={() => setForm(s)}>
+                      Editar servidor
+                    </button>
+                    <button
+                      className="revoke"
+                      onClick={() =>
+                        setDeleteItem({
+                          kind: "provider",
+                          item: s,
+                          url: `${BASE}/servers/${s.id}`,
+                        })
+                      }
+                    >
+                      Excluir servidor
+                    </button>
+                    {data.servicePlan?.features?.detailedHistory && (
+                      <button
+                        className="outline wide"
+                        onClick={() => showHistory(s)}
+                      >
+                        Histórico de quedas
+                      </button>
+                    )}
+                  </article>
+                ))}
+                {!data.providers.length && (
+                  <div className="empty">
+                    Adicione o primeiro servidor para começar.
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+          {screen === "codes" && (
+            <>
+              <div className="heading">
+                <p>
+                  Seu contrato permite{" "}
+                  {maxCodeServers == null
+                    ? "DNS ilimitados"
+                    : `até ${maxCodeServers} DNS`}{" "}
+                  por código.{" "}
+                  {data.servicePlan?.features?.autoFailover
+                    ? "Failover automático disponível."
+                    : "Failover automático não incluído."}{" "}
+                  A seleção é verificada no backend.
+                </p>
+                <input
+                  className="search"
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setCodePage(1);
+                  }}
+                  placeholder="Buscar código ou descrição"
+                />
+                <button
+                  className="primary"
+                  data-help-target="new-code"
+                  onClick={() =>
+                    setCodeForm({
+                      code: "",
+                      label: "",
+                      providerId:
+                        data.providers.find((p) => p.status === "active")?.id ||
+                        "",
+                    })
+                  }
+                >
+                  + Novo código
+                </button>
+              </div>
+              <div className="panel codepanel">
+                <div className="codeheads">
+                  <b>Código</b>
+                  <b>Descrição</b>
+                  <b>Servidores do código</b>
+                  <b>Status</b>
+                </div>
+                {visibleCodes.map((c) => (
+                  <div className="coderow" key={c.id}>
+                    <div>
+                      <small className="m-label">Código</small>
+                      <b className="mono">{c.code}</b>
+                    </div>
+                    <div>
+                      <small className="m-label">Descrição</small>
+                      {c.label || "Sem descrição"}
+                    </div>
+                    <div>
+                      <small className="m-label">DNS vinculados</small>
+                      <div className="code-actions">
+                        <span className="pill checking">
+                          {c.serverIds.length} DNS
+                        </span>
+                        <span
+                          className={`pill ${c.allowWebIssuance ? "healthy" : "checking"}`}
+                        >
+                          {c.allowWebIssuance
+                            ? "Player Web liberado"
+                            : "Player Web restrito"}
+                        </span>
+                        {canPoolEdit && (
+                          <button
+                            className="outline"
+                            onClick={() =>
+                              setPoolForm({
+                                id: c.id,
+                                code: c.code,
+                                serverIds: [...c.serverIds],
+                              })
+                            }
+                          >
+                            Configurar DNS
+                          </button>
+                        )}
+                        <span className="pill checking">
+                          {c.credits?.available || 0} créditos ·{" "}
+                          {c.activationCount || 0}
+                          {c.maxActivations != null
+                            ? `/${c.maxActivations}`
+                            : ""}{" "}
+                          ativações
+                        </span>
+                        <button
+                          className="outline"
+                          onClick={() => setAllocation(c)}
+                        >
+                          Alocar créditos
+                        </button>
+                        <button
+                          className="outline"
+                          onClick={() =>
+                            setEditCode({
+                              id: c.id,
+                              code: c.code,
+                              label: c.label || "",
+                              maxActivations: c.maxActivations ?? "",
+                              allowWebIssuance: !!c.allowWebIssuance,
+                              originalExpiresAt: c.expiresAt || null,
+                              expiresAt: c.expiresAt
+                                ? new Intl.DateTimeFormat("en-CA", {
+                                    timeZone: "America/Sao_Paulo",
+                                  }).format(new Date(c.expiresAt))
+                                : "",
+                            })
+                          }
+                        >
+                          Editar código
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <small className="m-label">Status</small>
+                      <span
+                        className={`pill ${c.status === "active" ? "healthy" : "checking"}`}
+                      >
+                        {{
+                          active: "Ativo",
+                          revoked: "Revogado",
+                          expired: "Expirado",
+                        }[c.status] || c.status}
+                      </span>
+                      {c.status === "active" && (
+                        <button className="revoke" onClick={() => revoke(c)}>
+                          Revogar
+                        </button>
+                      )}
+                      <button
+                        className="revoke"
+                        onClick={() =>
+                          setDeleteItem({
+                            kind: "code",
+                            item: c,
+                            url: `${BASE}/codes/${c.id}`,
+                          })
+                        }
+                      >
+                        Excluir
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {!visibleCodes.length && (
+                  <div className="empty">Nenhum código encontrado.</div>
+                )}
+              </div>
+              <div className="pagination">
+                <span>
+                  {codes.count} código(s) • página {codes.page}
+                </span>
+                <div>
+                  <button
+                    className="outline"
+                    disabled={codePage <= 1}
+                    onClick={() => setCodePage((v) => Math.max(1, v - 1))}
+                  >
+                    Anterior
+                  </button>
+                  <button
+                    className="outline"
+                    disabled={codePage * 25 >= codes.count}
+                    onClick={() => setCodePage((v) => v + 1)}
+                  >
+                    Próxima
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </section>
+      {deleteItem && (
+        <DeletionDialog
+          kind={deleteItem.kind}
+          item={deleteItem.item}
+          url={deleteItem.url}
+          onClose={() => setDeleteItem(null)}
+          onDeleted={() => {
+            setDeleteItem(null);
+            refresh();
+            reloadCodeList();
+          }}
+        />
+      )}
+      {form && (
+        <div
+          className="overlay"
+          role="presentation"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setForm(null);
+          }}
+        >
+          <form
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={form?.id ? "Editar DNS" : "Novo DNS"}
+            onSubmit={saveServer}
+          >
+            <div className="between">
+              <h2>{form.id ? "Editar DNS" : "Novo DNS"}</h2>
+              <button
+                type="button"
+                className="close"
+                aria-label="Fechar edição de DNS"
+                onClick={() => setForm(null)}
+              >
+                ×
+              </button>
+            </div>
+            <Label>Nome do DNS</Label>
+            <input
+              aria-label="Nome do servidor"
+              required
+              maxLength="120"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+            />
+            <Label>Endereço do servidor (URL)</Label>
+            <input
+              aria-label="URL base do servidor"
+              required
+              type="url"
+              placeholder="https://servidor.exemplo.com"
+              value={form.baseUrl}
+              onChange={(e) => setForm({ ...form, baseUrl: e.target.value })}
+            />
+            <div className="rowfields">
+              <div>
+                <Label>Prioridade (menor primeiro)</Label>
+                <input
+                  aria-label="Prioridade do servidor"
+                  type="number"
+                  min="0"
+                  max="1000"
+                  value={form.priority}
+                  onChange={(e) =>
+                    setForm({ ...form, priority: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <Label>Situação</Label>
+                <select
+                  aria-label="Situação do servidor"
+                  value={form.status}
+                  onChange={(e) => setForm({ ...form, status: e.target.value })}
+                >
+                  <option value="active">Ativo</option>
+                  <option value="disabled">Desativado</option>
+                </select>
+              </div>
+            </div>
+            <div className="modalfoot">
+              <button
+                type="button"
+                className="outline"
+                onClick={() => setForm(null)}
+              >
+                Cancelar
+              </button>
+              <button className="primary" disabled={saving}>
+                {saving ? "Salvando…" : "Salvar servidor"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+      {codeForm && (
+        <div
+          className="overlay"
+          role="presentation"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setCodeForm(null);
+          }}
+        >
+          <form
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Novo código"
+            onSubmit={createCode}
+          >
+            <div className="between">
+              <h2>Novo código de parceria</h2>
+              <button
+                type="button"
+                className="close"
+                aria-label="Fechar cadastro de código"
+                onClick={() => setCodeForm(null)}
+              >
+                ×
+              </button>
+            </div>
+            <Label>Código (deixe vazio para gerar)</Label>
+            <input
+              aria-label="Código de parceria"
+              maxLength="12"
+              placeholder="Gerar automaticamente"
+              value={codeForm.code}
+              onChange={(e) =>
+                setCodeForm({ ...codeForm, code: e.target.value })
+              }
+            />
+            <Label>Descrição</Label>
+            <input
+              aria-label="Descrição do código"
+              maxLength="120"
+              value={codeForm.label}
+              onChange={(e) =>
+                setCodeForm({ ...codeForm, label: e.target.value })
+              }
+            />
+            <Label>Servidor de destino</Label>
+            <select
+              aria-label="Servidor de destino"
+              required
+              value={codeForm.providerId}
+              onChange={(e) =>
+                setCodeForm({ ...codeForm, providerId: e.target.value })
+              }
+            >
+              <option value="">Selecione</option>
+              {data.providers
+                .filter((p) => p.status === "active")
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+            </select>
+            <div className="modalfoot">
+              <button
+                type="button"
+                className="outline"
+                onClick={() => setCodeForm(null)}
+              >
+                Cancelar
+              </button>
+              <button
+                className="primary"
+                disabled={saving || !codeForm.providerId}
+              >
+                {saving ? "Salvando…" : "Criar código"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+      {editCode && (
+        <div
+          className="overlay"
+          onMouseDown={(e) => e.target === e.currentTarget && setEditCode(null)}
+        >
+          <form
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Editar código"
+            onSubmit={saveCode}
+          >
+            <div className="between">
+              <h2>Editar código {editCode.code}</h2>
+              <button
+                className="close"
+                type="button"
+                aria-label="Fechar edição de código"
+                onClick={() => setEditCode(null)}
+              >
+                ×
+              </button>
+            </div>
+            <Label>Descrição</Label>
+            <input
+              aria-label="Descrição do código"
+              maxLength="120"
+              value={editCode.label}
+              onChange={(e) =>
+                setEditCode((v) => ({ ...v, label: e.target.value }))
+              }
+            />
+            <Label>Máximo de ativações (vazio = sem limite)</Label>
+            <input
+              aria-label="Máximo de ativações"
+              type="number"
+              min="1"
+              value={editCode.maxActivations}
+              onChange={(e) =>
+                setEditCode((v) => ({ ...v, maxActivations: e.target.value }))
+              }
+            />
+            <label className="partner-web-switch">
+              <input
+                type="checkbox"
+                checked={!!editCode.allowWebIssuance}
+                onChange={(e) =>
+                  setEditCode((v) => ({
+                    ...v,
+                    allowWebIssuance: e.target.checked,
+                  }))
+                }
+              />{" "}
+              Autorizar que revendas emitam Player Web usando este código (sem
+              vínculo obrigatório entre contas)
+            </label>
+            <p className="modalhelp">
+              É necessário que a DeltaTV habilite Player Web no contrato.
+              Recomendado definir um limite de ativações e controlar o saldo do
+              código.
+            </p>
+            <Label>Expiração (deixe vazio para sem data)</Label>
+            <input
+              aria-label="Expiração do código"
+              type="date"
+              value={editCode.expiresAt}
+              onChange={(e) =>
+                setEditCode((v) => ({ ...v, expiresAt: e.target.value }))
+              }
+            />
+            <div className="modalfoot">
+              <button
+                type="button"
+                className="outline"
+                onClick={() => setEditCode(null)}
+              >
+                Cancelar
+              </button>
+              <button className="primary" disabled={saving}>
+                Salvar
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+      {allocation && (
+        <CreditAllocationModal
+          code={allocation}
+          onClose={() => setAllocation(null)}
+          onSaved={() => {
+            setAllocation(null);
+            reloadCodeList();
+          }}
+        />
+      )}
+      {history && (
+        <div
+          className="overlay"
+          role="presentation"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setHistory(null);
+          }}
+        >
+          <div
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Histórico de ${history.name}`}
+          >
+            <div className="between">
+              <h2>Histórico · {history.name}</h2>
+              <button
+                type="button"
+                className="close"
+                onClick={() => setHistory(null)}
+              >
+                ×
+              </button>
+            </div>
+            <p className="modalhelp">
+              Até 50 mudanças de estado nos últimos 30 dias. Uma verificação
+              bem-sucedida de HTTP não garante reprodução do catálogo.
+            </p>
+            {history.loading ? (
+              <p>Carregando…</p>
+            ) : history.error ? (
+              <div className="alert">{history.error}</div>
+            ) : !history.data.length ? (
+              <div className="empty">Nenhuma mudança de estado registrada.</div>
+            ) : (
+              <div className="servers-picker">
+                {history.data.map((e) => (
+                  <div className="server-option" key={e.id}>
+                    <div className="grow">
+                      <b>{new Date(e.occurredAt).toLocaleString("pt-BR")}</b>
+                      <small>
+                        {e.note || "Estado atualizado pelo monitor"}
+                      </small>
+                    </div>
+                    <span className={`pill ${e.state}`}>
+                      {healthNames[e.state] || e.state}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="modalfoot">
+              <button className="outline" onClick={() => setHistory(null)}>
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {poolForm && (
+        <div
+          className="overlay"
+          role="presentation"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setPoolForm(null);
+          }}
+        >
+          <form className="modal" onSubmit={savePool}>
+            <div className="between">
+              <div>
+                <h2>Servidores do código {poolForm.code}</h2>
+                <p className="modalhelp">
+                  Escolha{" "}
+                  {maxCodeServers == null
+                    ? "quantas URLs equivalentes precisar"
+                    : `entre 1 e ${maxCodeServers} URLs equivalentes`}
+                  . O backend valida os limites do plano e a compatibilidade das
+                  credenciais.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="close"
+                onClick={() => setPoolForm(null)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="servers-picker">
+              {data.providers
+                .filter((p) => p.status === "active")
+                .map((p) => (
+                  <label
+                    key={p.id}
+                    className={`server-option ${poolForm.serverIds.includes(p.id) ? "selected" : ""}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={poolForm.serverIds.includes(p.id)}
+                      onChange={() => toggleServer(p.id)}
+                    />
+                    <div className="grow">
+                      <b>{p.name}</b>
+                      <small className="break">{p.baseUrl}</small>
+                    </div>
+                    <div className="server-status">
+                      <State health={p.health} />
+                      <small>
+                        {p.health?.latencyMs != null
+                          ? `${p.health.latencyMs}ms`
+                          : "Sem medição"}
+                      </small>
+                    </div>
+                  </label>
+                ))}
+            </div>
+            <p className="modalhelp">
+              {poolForm.serverIds.length} DNS selecionada(s) ·{" "}
+              {maxCodeServersLabel} permitidas. Ordem de seleção define a URL
+              padrão; o monitor prioriza as saudáveis e mais rápidas.
+            </p>
+            <div className="modalfoot">
+              <button
+                type="button"
+                className="outline"
+                onClick={() => setPoolForm(null)}
+              >
+                Cancelar
+              </button>
+              <button
+                className="primary"
+                disabled={
+                  saving ||
+                  poolForm.serverIds.length < 1 ||
+                  (maxCodeServers !== null &&
+                    poolForm.serverIds.length > maxCodeServers)
+                }
+              >
+                {saving ? "Salvando…" : "Salvar DNS"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
-    {master&&<p className="notice">Para dúvidas ou mudança para um plano inferior, fale com seu Master: <strong>{master.name}</strong>{master.phone&&<> · <a href={`tel:${master.phone.replace(/[^\d+]/g,'')}`}>{master.phone}</a></>}</p>}
-    <NetworkCharges/>
-   </section></main>;
- return <div className="shell">
- {mobileMenu&&<button className="partner-scrim" aria-label="Fechar navegação" onClick={()=>setMobileMenu(false)}/>}
- <aside className={`aside ${mobileMenu?"mobile-open":""}`}>
-  <div className="logo"><div className="brandico">D</div><div className="brandcopy">Delta TV<small>PORTAL DO PARCEIRO</small></div><button type="button" className="close mobile-close" aria-label="Fechar menu" onClick={()=>setMobileMenu(false)}><Icon name="x" size={20}/></button></div>
-  
-  <nav className="nav" aria-label="Navegação do parceiro">{NAV_GROUPS.map(group=><div key={group.label} className="partner-nav-group"><span className="partner-nav-label">{group.label}</span>{group.items.filter(([id])=>(id!=="studio"||studioApps.length>0)&&(
- !simpleMode||SIMPLE_PARTNER.has(id)||screen===id)).map(([id,name,ico])=><button type="button" className={screen===id?"active":""} aria-current={screen===id?"page":undefined} key={id} data-help-target={({overview:"home", account:"profile", "white-label":"apps", studio:"studio", servers:"servers", codes:"codes", devices:"devices", licenses:"licenses", billing:"billing", notifications:"notifications", help:"help"})[id] || undefined} onClick={()=>navigate(id)}><span className="nav-icon"><Icon name={ico} size={19}/></span><span className="nav-text">{name}</span>{id==="notifications"&&showBadge&&unread>0&&<b className="nav-count">{unread}</b>}{screen===id&&<Icon name="chevronRight" size={14} className="nav-chevron"/>}</button>)}</div>)}</nav>
-  <div className="sidefoot"><span className={`side-status-dot ${data.monitorEnabled?"is-on":""}`}/><div><span>Monitoramento</span><b>{data.monitorEnabled?"Ativado":"Desativado"}</b></div></div>
- </aside>
- <section className="main"><div style={{padding:"14px 22px 0"}}><TaskFinder tasks={TASKS.filter(task=>(task.route!=="studio"||studioApps.length>0))} onNavigate={navigate} /></div><header className="app-header"><div className="header-left"><button type="button" className="partner-menu" aria-label="Abrir menu" onClick={()=>setMobileMenu(true)}><Icon name="menu" size={21}/></button><div className="page-heading"><div className="eyebrow"><span className="eyebrow-dot"/>{data.servicePlan?.features?.label||"PARCEIRO DE CONTEÚDO"}</div><h1>{SCREEN_TITLES[screen]||"Painel do parceiro"}</h1><p className="page-subtitle">{SCREEN_SUBTITLES[screen]||"Gerencie sua parceria"}</p></div></div><div className="topright"><button type="button" className="easy-mode-button" aria-pressed={!simpleMode} onClick={()=>setSimpleMode(v=>!v)}>{simpleMode?"Modo simples · mostrar tudo":"Modo completo · simplificar"}</button><button type="button" className="header-refresh" data-help-target="context-help" onClick={()=>window.dispatchEvent(new CustomEvent("deltatv-help-context",{detail:{screen}}))}>? Ajuda</button><button type="button" className="header-refresh" onClick={refresh} title="Atualizar informações"><Icon name="refresh" size={18}/><span>Atualizar</span></button><button type="button" className="header-notifications" aria-label={`Notificações${unread?` (${unread} não lidas)`:""}`} onClick={()=>navigate("notifications")}><Icon name="bell" size={19}/>{showBadge&&unread>0&&<span className="notif-dot"/>}</button><div className="profile-wrap"><button type="button" className="profile-trigger" aria-haspopup="menu" aria-expanded={profileMenu} onClick={()=>setProfileMenu(v=>!v)}><span className="avatar">{profileDetails?.profile?.avatarData?<img src={profileDetails.profile.avatarData} className="profile-menu-avatar" alt=""/>:(user.name||user.email||"P")[0].toUpperCase()}</span><span className="profile-identity"><b>{user.name||"Parceiro"}</b><small>Minha conta</small></span><Icon name="chevron" size={16}/></button>{profileMenu&&<><button type="button" className="profile-dismiss" aria-label="Fechar menu da conta" onClick={()=>setProfileMenu(false)}/><div className="profile-popover" role="menu"><div className="profile-popover-title"><b>{user.name||"Parceiro"}</b><span>{user.email||"Conta de parceiro"}</span></div><button role="menuitem" onClick={()=>navigate("account")}><Icon name="account" size={17}/> Meu perfil</button><button role="menuitem" className="logout-item" onClick={signOut}><Icon name="logout" size={17}/> Sair da conta</button></div></>}</div></div></header>
- <div className="body"><Breadcrumb panel="parceiro" current={SCREEN_TITLES[screen]||"Início"} onHome={()=>navigate("overview")}/>
- {simpleMode && screen!=="overview" && <EasyPageGuide role="partner" page={screen} onBack={()=>navigate("overview")}/>}
- <HelpExperience screen={screen} portal="content" userId={user.id} onNavigate={navigate}/>
- {screen==="overview"&&<AppInstallSpotlight onOpen={() => navigate("downloads")} />}
- {screen==="overview"&&master&&<section className="master-home-contact" aria-label="Contato do Master">
-  <div className="master-home-contact-symbol"><Icon name="users" size={25}/></div>
-  <div className="master-home-contact-info"><span>Fale com seu Master</span><h2>{master.name||'Master'}</h2><p>{master.phone||'Telefone ainda não cadastrado'}</p></div>
-  {masterWhatsapp?<a className="master-home-whatsapp" href={`https://wa.me/${masterWhatsapp}`} target="_blank" rel="noopener noreferrer" aria-label={`Chamar ${master.name||'Master'} no WhatsApp`}>Chamar no WhatsApp <Icon name="arrow" size={18}/></a>:<small className="master-home-contact-empty">Peça ao Master para cadastrar o telefone em Minha conta.</small>}
- </section>}
- {screen==="overview"&&<EasyStart role="partner" onNavigate={navigate}/>}
- {screen==="overview"&&<section className="panel" style={{marginTop:16,padding:18,display:'grid',gap:10}}>
-   <h3>Minha central de gerenciamento</h3><p className="muted">Acesse os dispositivos, DNS, suporte e recursos operacionais da sua parceria.</p>
-   <div style={{display:'flex',gap:9,flexWrap:'wrap'}}>
-    {[['tickets','Central de Suporte'],['servers','Meus DNS'],['devices','Dispositivos']]
-     .map(([route,label])=><button type="button" key={route} className="outline" onClick={()=>navigate(route)}>{label}</button>)}
-   </div></section>}
-  {error&&<div className="alert">{error}</div>}
- {showUnread&&unread>0&&screen!=="notifications"&&<div className="partner-unread" role="status"><span className="alert-content"><Icon name="bell" size={20}/> Você tem <b>{unread} comunicado(s) não lido(s)</b> da Delta TV.</span><button className="primary" onClick={()=>navigate("notifications")}>Ver mensagens</button></div>}
- {data.providers.some(p=>["slow","suspect","down"].includes(p.health?.state))&&screen!=="servers"&&<div className="partner-alert" role="status"><span className="alert-content"><Icon name="alert" size={20}/> Há servidores da sua parceria com lentidão ou indisponibilidade.</span><button className="outline" onClick={()=>navigate("servers")}>Ver monitoramento</button></div>}
- {!data.monitorEnabled&&["overview","servers"].includes(screen)&&<div className="notice">O monitor automático está desligado. Solicite à DeltaTV a ativação do monitoramento.</div>}
- {screen==="support"&&<SupportCenter base="/partner"/>}
- {screen==="customers"&&<Customers/>}
- {screen==="licenses"&&<LicensesAndActivations/>}
- {screen==="web"&&<WebPlayer/>}
- {screen==="white-label"&&<WhiteLabelApps/>}
- {screen==="studio"&&studioApps.length>0&&<AppearanceStudio apps={studioApps}/>}
- {screen==="credits"&&<CreditsLedger/>}
- {screen==="notifications"&&<Messages onUnread={setUnread}/>}
- {screen==="access"&&<AccessHistory/>}
- {screen==="billing"&&<BillingHistory/>}
- {screen==="tickets"&&<TicketCenter/>}
- {screen==="downloads"&&<AppDownloads/>}
- {screen==="account"&&<PartnerAccount/>}
- {screen==="plans"&&<PlanUpgrade master={master} onPayment={()=>navigate("billing")}/>}
- {screen==="devices"&&<PartnerDevices/>}
- {screen==="overview"&&<>
-   {(!data.providers?.length || !data.totalCodes || data.providers?.some(p=>p.health?.state==="down"))&&
-    <section className="panel" aria-label="Próxima ação" style={{padding:18,marginBottom:14}}>
-      <h2>Próxima ação</h2>
-      {!data.providers?.length?<p>Configure seu primeiro DNS para começar a utilizar os códigos.</p>:
-       !data.totalCodes?<p>Seu DNS está cadastrado. Agora crie um código para ativar os aplicativos.</p>:
-       <p>Existe um DNS com falha. Consulte o monitoramento para identificar o problema.</p>}
-      <button className="primary" onClick={()=>navigate(!data.providers?.length?"servers":!data.totalCodes?"codes":"servers")}>
-        {!data.providers?.length?"Configurar DNS":!data.totalCodes?"Criar código":"Ver DNS com falha"}
-      </button>
-    </section>}
-    <CommercialOverview/><div className="stats"><div className="stat"><small>Servidores cadastrados</small><strong>{data.providers.length}</strong><span>Da sua parceria</span></div><div className="stat"><small>Servidores saudáveis</small><strong className="green">{data.providers.filter(p=>p.health?.state==="healthy").length}</strong><span>Verificados pelo monitor</span></div><div className="stat"><small>Em falha</small><strong className="red">{data.providers.filter(p=>p.health?.state==="down").length}</strong><span>Falhas confirmadas</span></div><div className="stat"><small>Códigos de parceria</small><strong>{data.totalCodes??0}</strong><span>Consulta paginada</span></div></div><div className="panel"><div className="panelhead"><div><h2>Saúde dos DNS</h2><p>Tempo de resposta e disponibilidade</p></div><button onClick={()=>navigate("servers")}>Ver servidores</button></div><div className="entries">{data.providers.map(s=><div className="entry" key={s.id}><div className={`serverdot ${s.health?.state||"unknown"}`}/><div className="grow"><b>{s.name}</b><small className="break">{s.baseUrl}</small></div><div className="latency">{s.health?.latencyMs!=null?`${s.health.latencyMs} ms`:"—"}</div><State health={s.health}/></div>)}{!data.providers.length&&<div className="empty">Nenhum DNS cadastrado. Adicione o primeiro DNS para conectar seus códigos.</div>}</div></div></>}
- {screen==="servers"&&<><div className="heading"><p>Cadastre DNS alternativos e monitore a resposta de cada servidor. Não confunda disponibilidade HTTP com reprodução garantida.</p><button className="primary" data-help-target="add-server" onClick={()=>setForm({name:"",baseUrl:"",priority:0,status:"active"})}>+ Adicionar DNS</button></div><div className="cards">{data.providers.map(s=><article className="servercard" key={s.id}><div className="between"><div className="iconglow"><Icon name="server" size={22}/></div><State health={s.health}/></div><h3>{s.name}</h3><p className="break">{s.baseUrl}</p><div className="two"><span>Latência</span><b>{s.health?.latencyMs!=null?`${s.health.latencyMs} ms`:"—"}</b></div><div className="two"><span>Prioridade configurada</span><b>{s.priority}</b></div><div className="two"><span>Prioridade em tempo real</span><b>#{s.effectivePriority||"—"} {data.autoPriority?"(automática)":"(manual)"}</b></div><div className="two"><span>Disponibilidade HTTP (24h / 7d / 30d)</span><b>{['24h','7d','30d'].map(period => { const sample=s.availability?.[period]; return sample?.percent == null ? `— (${sample?.samples || 0} testes)` : `${sample.percent}% (${sample.samples} testes)`; }).join(' · ')}</b></div><div className="two"><span>Última verificação</span><b>{s.health?.lastCheckedAt?new Date(s.health.lastCheckedAt).toLocaleString("pt-BR"):"—"}</b></div>{s.health?.lastError&&<div className="errorline">{s.health.lastError}</div>}<button className="outline wide" onClick={()=>setForm(s)}>Editar servidor</button><button className="revoke" onClick={()=>setDeleteItem({kind:"provider",item:s,url:`${BASE}/servers/${s.id}`})}>Excluir servidor</button>
- {data.servicePlan?.features?.detailedHistory&&<button className="outline wide" onClick={()=>showHistory(s)}>Histórico de quedas</button>}</article>)}{!data.providers.length&&<div className="empty">Adicione o primeiro servidor para começar.</div>}</div></>}
- {screen==="codes"&&<>
-  <div className="heading"><p>Seu contrato permite {maxCodeServers == null ? "DNS ilimitados" : `até ${maxCodeServers} DNS`} por código. {data.servicePlan?.features?.autoFailover?"Failover automático disponível.":"Failover automático não incluído."} A seleção é verificada no backend.</p>
-    <input className="search" value={search} onChange={e=>{setSearch(e.target.value);setCodePage(1)}} placeholder="Buscar código ou descrição"/>
-    <button className="primary" data-help-target="new-code" onClick={()=>setCodeForm({code:"",label:"",providerId:data.providers.find(p=>p.status==="active")?.id||""})}>+ Novo código</button>
-  </div>
-  <div className="panel codepanel"><div className="codeheads"><b>Código</b><b>Descrição</b><b>Servidores do código</b><b>Status</b></div>
-   {visibleCodes.map(c=><div className="coderow" key={c.id}>
-    <div><small className="m-label">Código</small><b className="mono">{c.code}</b></div>
-    <div><small className="m-label">Descrição</small>{c.label||"Sem descrição"}</div>
-    <div><small className="m-label">DNS vinculados</small><div className="code-actions"><span className="pill checking">{c.serverIds.length} DNS</span><span className={`pill ${c.allowWebIssuance?"healthy":"checking"}`}>{c.allowWebIssuance?"Player Web liberado":"Player Web restrito"}</span>
-      {canPoolEdit&&<button className="outline" onClick={()=>setPoolForm({id:c.id,code:c.code,serverIds:[...c.serverIds]})}>Configurar DNS</button>}<span className="pill checking">{c.credits?.available||0} créditos · {c.activationCount||0}{c.maxActivations!=null?`/${c.maxActivations}`:""} ativações</span><button className="outline" onClick={()=>setAllocation(c)}>Alocar créditos</button><button className="outline" onClick={()=>setEditCode({id:c.id,code:c.code,label:c.label||"",maxActivations:c.maxActivations??"",allowWebIssuance:!!c.allowWebIssuance,originalExpiresAt:c.expiresAt||null,expiresAt:c.expiresAt?new Intl.DateTimeFormat("en-CA",{timeZone:"America/Sao_Paulo"}).format(new Date(c.expiresAt)):""})}>Editar código</button></div></div>
-    <div><small className="m-label">Status</small><span className={`pill ${c.status==="active"?"healthy":"checking"}`}>{{active:"Ativo",revoked:"Revogado",expired:"Expirado"}[c.status]||c.status}</span>
-      {c.status==="active"&&<button className="revoke" onClick={()=>revoke(c)}>Revogar</button>}<button className="revoke" onClick={()=>setDeleteItem({kind:"code",item:c,url:`${BASE}/codes/${c.id}`})}>Excluir</button></div>
-   </div>)}
-   {!visibleCodes.length&&<div className="empty">Nenhum código encontrado.</div>}
-  </div>
-  <div className="pagination"><span>{codes.count} código(s) • página {codes.page}</span>
-   <div><button className="outline" disabled={codePage<=1} onClick={()=>setCodePage(v=>Math.max(1,v-1))}>Anterior</button>
-    <button className="outline" disabled={codePage*25>=codes.count} onClick={()=>setCodePage(v=>v+1)}>Próxima</button></div>
-  </div>
- </>}
-
- </div></section>{deleteItem&&<DeletionDialog kind={deleteItem.kind} item={deleteItem.item} url={deleteItem.url} onClose={()=>setDeleteItem(null)} onDeleted={()=>{setDeleteItem(null);refresh();reloadCodeList()}}/>}{form&&<div className="overlay" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setForm(null)}}><form className="modal" role="dialog" aria-modal="true" aria-label={form?.id?"Editar DNS":"Novo DNS"} onSubmit={saveServer}><div className="between"><h2>{form.id?"Editar DNS":"Novo DNS"}</h2><button type="button" className="close" aria-label="Fechar edição de DNS" onClick={()=>setForm(null)}>×</button></div><Label>Nome do DNS</Label><input aria-label="Nome do servidor" required maxLength="120" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/><Label>Endereço do servidor (URL)</Label><input aria-label="URL base do servidor" required type="url" placeholder="https://servidor.exemplo.com" value={form.baseUrl} onChange={e=>setForm({...form,baseUrl:e.target.value})}/><div className="rowfields"><div><Label>Prioridade (menor primeiro)</Label><input aria-label="Prioridade do servidor" type="number" min="0" max="1000" value={form.priority} onChange={e=>setForm({...form,priority:e.target.value})}/></div><div><Label>Situação</Label><select aria-label="Situação do servidor" value={form.status} onChange={e=>setForm({...form,status:e.target.value})}><option value="active">Ativo</option><option value="disabled">Desativado</option></select></div></div><div className="modalfoot"><button type="button" className="outline" onClick={()=>setForm(null)}>Cancelar</button><button className="primary" disabled={saving}>{saving?"Salvando…":"Salvar servidor"}</button></div></form></div>}{codeForm&&<div className="overlay" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setCodeForm(null)}}><form className="modal" role="dialog" aria-modal="true" aria-label="Novo código" onSubmit={createCode}><div className="between"><h2>Novo código de parceria</h2><button type="button" className="close" aria-label="Fechar cadastro de código" onClick={()=>setCodeForm(null)}>×</button></div><Label>Código (deixe vazio para gerar)</Label><input aria-label="Código de parceria" maxLength="12" placeholder="Gerar automaticamente" value={codeForm.code} onChange={e=>setCodeForm({...codeForm,code:e.target.value})}/><Label>Descrição</Label><input aria-label="Descrição do código" maxLength="120" value={codeForm.label} onChange={e=>setCodeForm({...codeForm,label:e.target.value})}/><Label>Servidor de destino</Label><select aria-label="Servidor de destino" required value={codeForm.providerId} onChange={e=>setCodeForm({...codeForm,providerId:e.target.value})}><option value="">Selecione</option>{data.providers.filter(p=>p.status==="active").map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select><div className="modalfoot"><button type="button" className="outline" onClick={()=>setCodeForm(null)}>Cancelar</button><button className="primary" disabled={saving||!codeForm.providerId}>{saving?"Salvando…":"Criar código"}</button></div></form></div>}{editCode&&<div className="overlay" onMouseDown={e=>e.target===e.currentTarget&&setEditCode(null)}><form className="modal" role="dialog" aria-modal="true" aria-label="Editar código" onSubmit={saveCode}><div className="between"><h2>Editar código {editCode.code}</h2><button className="close" type="button" aria-label="Fechar edição de código" onClick={()=>setEditCode(null)}>×</button></div><Label>Descrição</Label><input aria-label="Descrição do código" maxLength="120" value={editCode.label} onChange={e=>setEditCode(v=>({...v,label:e.target.value}))}/><Label>Máximo de ativações (vazio = sem limite)</Label><input aria-label="Máximo de ativações" type="number" min="1" value={editCode.maxActivations} onChange={e=>setEditCode(v=>({...v,maxActivations:e.target.value}))}/><label className="partner-web-switch"><input type="checkbox" checked={!!editCode.allowWebIssuance} onChange={e=>setEditCode(v=>({...v,allowWebIssuance:e.target.checked}))}/> Autorizar que revendas emitam Player Web usando este código (sem vínculo obrigatório entre contas)</label><p className="modalhelp">É necessário que a DeltaTV habilite Player Web no contrato. Recomendado definir um limite de ativações e controlar o saldo do código.</p><Label>Expiração (deixe vazio para sem data)</Label><input aria-label="Expiração do código" type="date" value={editCode.expiresAt} onChange={e=>setEditCode(v=>({...v,expiresAt:e.target.value}))}/><div className="modalfoot"><button type="button" className="outline" onClick={()=>setEditCode(null)}>Cancelar</button><button className="primary" disabled={saving}>Salvar</button></div></form></div>}{allocation&&<CreditAllocationModal code={allocation} onClose={()=>setAllocation(null)} onSaved={()=>{setAllocation(null);reloadCodeList()}}/>}
- {history&&<div className="overlay" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setHistory(null)}}>
-  <div className="modal" role="dialog" aria-modal="true" aria-label={`Histórico de ${history.name}`}>
-   <div className="between"><h2>Histórico · {history.name}</h2><button type="button" className="close" onClick={()=>setHistory(null)}>×</button></div>
-   <p className="modalhelp">Até 50 mudanças de estado nos últimos 30 dias. Uma verificação bem-sucedida de HTTP não garante reprodução do catálogo.</p>
-   {history.loading?<p>Carregando…</p>:history.error?<div className="alert">{history.error}</div>:
-     !history.data.length?<div className="empty">Nenhuma mudança de estado registrada.</div>:
-     <div className="servers-picker">{history.data.map(e=><div className="server-option" key={e.id}>
-      <div className="grow"><b>{new Date(e.occurredAt).toLocaleString("pt-BR")}</b><small>{e.note||"Estado atualizado pelo monitor"}</small></div>
-      <span className={`pill ${e.state}`}>{healthNames[e.state]||e.state}</span>
-     </div>)}</div>}
-   <div className="modalfoot"><button className="outline" onClick={()=>setHistory(null)}>Fechar</button></div>
-  </div>
- </div>}
- {poolForm&&<div className="overlay" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setPoolForm(null)}}>
-  <form className="modal" onSubmit={savePool}>
-   <div className="between"><div><h2>Servidores do código {poolForm.code}</h2><p className="modalhelp">Escolha {maxCodeServers == null ? "quantas URLs equivalentes precisar" : `entre 1 e ${maxCodeServers} URLs equivalentes`}. O backend valida os limites do plano e a compatibilidade das credenciais.</p></div>
-    <button type="button" className="close" onClick={()=>setPoolForm(null)}>×</button></div>
-   <div className="servers-picker">{data.providers.filter(p=>p.status==="active").map(p=><label key={p.id} className={`server-option ${poolForm.serverIds.includes(p.id)?"selected":""}`}>
-    <input type="checkbox" checked={poolForm.serverIds.includes(p.id)} onChange={()=>toggleServer(p.id)}/>
-    <div className="grow"><b>{p.name}</b><small className="break">{p.baseUrl}</small></div>
-    <div className="server-status"><State health={p.health}/><small>{p.health?.latencyMs!=null?`${p.health.latencyMs}ms`:"Sem medição"}</small></div>
-   </label>)}</div>
-   <p className="modalhelp">{poolForm.serverIds.length} DNS selecionada(s) · {maxCodeServersLabel} permitidas. Ordem de seleção define a URL padrão; o monitor prioriza as saudáveis e mais rápidas.</p>
-   <div className="modalfoot"><button type="button" className="outline" onClick={()=>setPoolForm(null)}>Cancelar</button>
-    <button className="primary" disabled={saving||poolForm.serverIds.length<1||(maxCodeServers !== null && poolForm.serverIds.length>maxCodeServers)}>{saving?"Salvando…":"Salvar DNS"}</button></div>
-  </form>
- </div>}</div>;
+  );
 }
 
 /** O formulário público tem prioridade absoluta sobre a sessão já existente. */
 export default function App() {
- const [invite,setInvite]=useState(INITIAL_INVITE);
- const identityOf=()=>{const user=getAuth()?.user;return `${user?.id||'anonymous'}:${user?.partnerId||'none'}:${user?.role||'guest'}`};
- const [identity,setIdentity]=useState(identityOf);
- useEffect(()=>{const update=()=>setIdentity(identityOf());window.addEventListener('auth-changed',update);return()=>window.removeEventListener('auth-changed',update)},[]);
- useEffect(()=>{
-  const onLocationChange=()=>{const request=consumeInviteRequest();if(request)setInvite(request)};
-  window.addEventListener("popstate",onLocationChange);
-  window.addEventListener("hashchange",onLocationChange);
-  return()=>{
-   window.removeEventListener("popstate",onLocationChange);
-   window.removeEventListener("hashchange",onLocationChange);
+  const [invite, setInvite] = useState(INITIAL_INVITE);
+  const identityOf = () => {
+    const user = getAuth()?.user;
+    return `${user?.id || "anonymous"}:${user?.partnerId || "none"}:${user?.role || "guest"}`;
   };
- },[]);
- if(invite)return invite.type==="commercial" ? <CommercialInviteRegistration token={invite.token} onBack={()=>setInvite(null)}/> : <InviteRegistration token={invite.token} onBack={()=>setInvite(null)}/>;
- if(getAuth()?.user?.role==='portal_select' && getAuth()?.user?.portalAdmin)
-   return <main role="alert" style={{maxWidth:620,margin:'8vh auto',padding:28}}>
-     <h1>Parceria original não vinculada</h1>
-     <p>Esta sessão antiga não possui um vínculo válido com sua parceria original. Nenhuma conta de teste será aberta.</p>
-     <p>Peça ao Superadmin para verificar o campo <strong>Conta operacional vinculada</strong> do seu usuário e selecionar o cadastro de Parceiro já existente.</p>
-     <p><a href="https://admin.deltatv.com.br">Abrir Painel Admin</a></p>
-     <button type="button" onClick={()=>void logout()}>Sair e entrar novamente</button>
-   </main>;
- return <PartnerPortalApp key={identity}/>;
+  const [identity, setIdentity] = useState(identityOf);
+  useEffect(() => {
+    const update = () => setIdentity(identityOf());
+    window.addEventListener("auth-changed", update);
+    return () => window.removeEventListener("auth-changed", update);
+  }, []);
+  useEffect(() => {
+    const onLocationChange = () => {
+      const request = consumeInviteRequest();
+      if (request) setInvite(request);
+    };
+    window.addEventListener("popstate", onLocationChange);
+    window.addEventListener("hashchange", onLocationChange);
+    return () => {
+      window.removeEventListener("popstate", onLocationChange);
+      window.removeEventListener("hashchange", onLocationChange);
+    };
+  }, []);
+  if (invite)
+    return invite.type === "commercial" ? (
+      <CommercialInviteRegistration
+        token={invite.token}
+        onBack={() => setInvite(null)}
+      />
+    ) : (
+      <InviteRegistration token={invite.token} onBack={() => setInvite(null)} />
+    );
+  if (getAuth()?.user?.role === "portal_select" && getAuth()?.user?.portalAdmin)
+    return (
+      <main
+        role="alert"
+        style={{ maxWidth: 620, margin: "8vh auto", padding: 28 }}
+      >
+        <h1>Parceria original não vinculada</h1>
+        <p>
+          Esta sessão antiga não possui um vínculo válido com sua parceria
+          original. Nenhuma conta de teste será aberta.
+        </p>
+        <p>
+          Peça ao Superadmin para verificar o campo{" "}
+          <strong>Conta operacional vinculada</strong> do seu usuário e
+          selecionar o cadastro de Parceiro já existente.
+        </p>
+        <p>
+          <a href="https://admin.deltatv.com.br">Abrir Painel Admin</a>
+        </p>
+        <button type="button" onClick={() => void logout()}>
+          Sair e entrar novamente
+        </button>
+      </main>
+    );
+  return <PartnerPortalApp key={identity} />;
 }
