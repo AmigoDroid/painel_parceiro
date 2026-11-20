@@ -31,11 +31,11 @@ const NAV_GROUPS=[
  {label:"Dispositivos",items:[["devices","Minhas TVs","monitor"],["customers","Clientes","users"],["support","Resolver problema da TV","activity"]]},
  {label:"Licenças",items:[["licenses","Licenças e ativações","shield"],["plans","Meu plano e upgrade","wallet"]]},
  {label:"Ativar aplicativo",items:[["codes","Códigos para ativar TVs","key"],["white-label","Meus aplicativos","download"],["web","Player Web","globe"],["downloads","Aplicativos","download"]]},
- {label:"Servidores e personalização",items:[["servers","Meus DNS","server"],["monitor","Saúde dos DNS","activity"],["studio","Estúdio Visual","monitor"]]},
+ {label:"Servidores e personalização",items:[["servers","Meus DNS","server"],["studio","Estúdio Visual","monitor"]]},
  {label:"Minha conta",items:[["account","Minha conta","account"],["tickets","Central de Suporte","help"],["access","Histórico de login","history"],["notifications","Notificações","bell"],["help","Guias e tutoriais","help"]]},
 ];
 // Modo simples não pode esconder pagamentos, vigência ou acesso ao PlayerWeb.
-const SIMPLE_PARTNER = new Set(["overview", "support", "customers", "devices", "codes", "servers", "monitor", "notifications", "help", "tickets", "account", "billing", "plans", "licenses", "web", "downloads"]);
+const SIMPLE_PARTNER = new Set(["overview", "support", "customers", "devices", "codes", "servers", "notifications", "help", "tickets", "account", "billing", "plans", "licenses", "web", "downloads"]);
 const SCREEN_SUBTITLES={
  overview:"Acompanhe sua operação, códigos e infraestrutura em um só lugar.",
  customers:"Gerencie os clientes associados à sua parceria.",
@@ -47,9 +47,8 @@ const SCREEN_SUBTITLES={
  "white-label":"Controle seus aplicativos white-label, servidores e ativações.",
  studio:"Personalize o visual e publique novos temas para seus aplicativos Roku.",
  servers:"Configure e acompanhe seus servidores de conteúdo.",
- monitor:"Disponibilidade e latência dos servidores, em tempo real.",
  downloads:"Aprenda a instalar DeltaTV no Android, TV Box e Roku, e consulte links e códigos de download.",
- plans:"Compare planos superiores e faça upgrade após confirmar o pagamento.",
+ plans:"Compare os planos que seu Master disponibilizou e faça upgrade quando permitido.",
  credits:"Acompanhe movimentações e saldos de créditos.",
  billing:"Consulte suas faturas e informações financeiras.",
  tickets:"Abra e acompanhe chamados para a DeltaTV.",
@@ -62,7 +61,7 @@ const SCREEN_TITLES=Object.fromEntries(NAV_GROUPS.flatMap(g=>g.items.map(i=>[i[0
 const PARTNER_ROUTES = new Set(Object.keys(SCREEN_TITLES));
 export const readPartnerRoute = (hash = window.location.hash) => {
  const raw = hash.startsWith('#/') ? hash.slice(2).split('?')[0] : 'overview';
- const id = raw === 'commercial' ? 'plans' : raw;
+ const id = raw === 'commercial' ? 'plans' : raw === 'monitor' ? 'servers' : raw;
  return PARTNER_ROUTES.has(id) ? id : 'overview';
 };
 
@@ -147,6 +146,7 @@ function PartnerPortalApp(){
  },[studioApps.length]);
  useEffect(() => {
   const onHash = () => { const next = readPartnerRoute();
+   if(/^#\/monitor(?:\?|$)/.test(window.location.hash))window.history.replaceState(window.history.state,"","#/servers");
    if(next === 'studio' && !studioApps.length) {navigate('overview');return;}
    setScreen(next);setForm(null);setMobileMenu(false);setProfileMenu(false);
   };
@@ -239,13 +239,13 @@ function PartnerPortalApp(){
  {screen==="overview"&&<section className="panel" style={{marginTop:16,padding:18,display:'grid',gap:10}}>
    <h3>Minha central de gerenciamento</h3><p className="muted">Acesse os dispositivos, DNS, suporte e recursos operacionais da sua parceria.</p>
    <div style={{display:'flex',gap:9,flexWrap:'wrap'}}>
-    {[['tickets','Central de Suporte'],['servers','Meus DNS'],['monitor','Saúde dos DNS'],['devices','Dispositivos']]
+    {[['tickets','Central de Suporte'],['servers','Meus DNS'],['devices','Dispositivos']]
      .map(([route,label])=><button type="button" key={route} className="outline" onClick={()=>navigate(route)}>{label}</button>)}
    </div></section>}
   {error&&<div className="alert">{error}</div>}
  {showUnread&&unread>0&&screen!=="notifications"&&<div className="partner-unread" role="status"><span className="alert-content"><Icon name="bell" size={20}/> Você tem <b>{unread} comunicado(s) não lido(s)</b> da Delta TV.</span><button className="primary" onClick={()=>navigate("notifications")}>Ver mensagens</button></div>}
- {data.providers.some(p=>["slow","suspect","down"].includes(p.health?.state))&&! ["servers","monitor"].includes(screen)&&<div className="partner-alert" role="status"><span className="alert-content"><Icon name="alert" size={20}/> Há servidores da sua parceria com lentidão ou indisponibilidade.</span><button className="outline" onClick={()=>navigate("monitor")}>Ver monitoramento</button></div>}
- {!data.monitorEnabled&&["overview","servers","monitor"].includes(screen)&&<div className="notice">O monitor automático está desligado. Solicite à DeltaTV a ativação do monitoramento.</div>}
+ {data.providers.some(p=>["slow","suspect","down"].includes(p.health?.state))&&screen!=="servers"&&<div className="partner-alert" role="status"><span className="alert-content"><Icon name="alert" size={20}/> Há servidores da sua parceria com lentidão ou indisponibilidade.</span><button className="outline" onClick={()=>navigate("servers")}>Ver monitoramento</button></div>}
+ {!data.monitorEnabled&&["overview","servers"].includes(screen)&&<div className="notice">O monitor automático está desligado. Solicite à DeltaTV a ativação do monitoramento.</div>}
  {screen==="support"&&<SupportCenter base="/partner"/>}
  {screen==="customers"&&<Customers/>}
  {screen==="licenses"&&<LicensesAndActivations/>}
@@ -259,8 +259,7 @@ function PartnerPortalApp(){
  {screen==="tickets"&&<TicketCenter/>}
  {screen==="downloads"&&<AppDownloads/>}
  {screen==="account"&&<PartnerAccount/>}
- {screen==="monitor"&&<><div className="heading"><p>Estado e latência dos servidores da sua parceria. A consulta usa medições já coletadas pelo backend e não gera novas sondagens.</p><button className="outline" onClick={refresh}>Atualizar</button></div><div className="cards">{data.providers.map(s=><article className="servercard" key={s.id}><div className="between"><h3>{s.name}</h3><State health={s.health}/></div><p className="break">{s.baseUrl}</p><div className="two"><span>Latência</span><b>{s.health?.latencyMs!=null?`${s.health.latencyMs} ms`:"Sem medição"}</b></div><div className="two"><span>Disponibilidade HTTP (24h / 7d / 30d)</span><b>{['24h','7d','30d'].map(period => { const sample=s.availability?.[period]; return sample?.percent == null ? `— (${sample?.samples || 0} testes)` : `${sample.percent}% (${sample.samples} testes)`; }).join(' · ')}</b></div><div className="two"><span>Última verificação</span><b>{s.health?.lastCheckedAt?new Date(s.health.lastCheckedAt).toLocaleString("pt-BR"):"—"}</b></div>{s.health?.lastError&&<div className="errorline">{s.health.lastError}</div>}</article>)}{!data.providers.length&&<div className="empty">Nenhum servidor.</div>}</div></>}
- {screen==="plans"&&<><CommercialOverview/><PlanUpgrade onPayment={()=>navigate("billing")}/></>}
+ {screen==="plans"&&<PlanUpgrade master={master} onPayment={()=>navigate("billing")}/>}
  {screen==="devices"&&<PartnerDevices/>}
  {screen==="overview"&&<>
    {(!data.providers?.length || !data.totalCodes || data.providers?.some(p=>p.health?.state==="down"))&&
@@ -269,7 +268,7 @@ function PartnerPortalApp(){
       {!data.providers?.length?<p>Configure seu primeiro DNS para começar a utilizar os códigos.</p>:
        !data.totalCodes?<p>Seu DNS está cadastrado. Agora crie um código para ativar os aplicativos.</p>:
        <p>Existe um DNS com falha. Consulte o monitoramento para identificar o problema.</p>}
-      <button className="primary" onClick={()=>navigate(!data.providers?.length?"servers":!data.totalCodes?"codes":"monitor")}>
+      <button className="primary" onClick={()=>navigate(!data.providers?.length?"servers":!data.totalCodes?"codes":"servers")}>
         {!data.providers?.length?"Configurar DNS":!data.totalCodes?"Criar código":"Ver DNS com falha"}
       </button>
     </section>}
