@@ -59,7 +59,7 @@ export default function PlanUpgrade({onPayment,master}) {
     <div className="between"><h2 id="upgrade-dialog-title">Confirmar upgrade</h2><button type="button" className="close" aria-label="Fechar confirmação" autoFocus disabled={busy} onClick={()=>setQuote(null)}>×</button></div>
     <p>Plano escolhido: <strong>{selectedPlan?.name}</strong></p>
     {selectedPlan?.monthlyPriceCents!=null&&<p>Mensalidade do novo plano: <strong>{money(selectedPlan.monthlyPriceCents)}</strong>.</p>}
-    <p id="upgrade-dialog-description">Valor proporcional a pagar agora: <strong>{money(quote.amountCents)}</strong>.</p>
+    <p id="upgrade-dialog-description">Valor integral a pagar agora: <strong>{money(quote.amountCents)}</strong>.</p>
     <p>Seu plano só será alterado após a confirmação do pagamento. Você será encaminhado às cobranças para pagar.</p>
     <div className="modalfoot"><button className="outline" type="button" disabled={busy} onClick={()=>setQuote(null)}>Cancelar</button><button className="primary" type="button" disabled={busy} onClick={pay}>{busy?'Processando…':'Gerar cobrança e pagar'}</button></div>
    </div>
