@@ -1,3 +1,4 @@
+import { DeviceDns } from "@deltatv/ui/EmergencyDns";
 import { useDeviceBulkActions } from "../shared/useDeviceBulkActions.jsx";
 import Modal from "@deltatv/ui/Dialog";
 import { useBulkRemoval } from "../shared/useBulkRemoval.jsx";
@@ -12,7 +13,7 @@ export function CommercialOverview(){
  const [data,setData]=useState(null),[plan,setPlan]=useState(null),[error,setError]=useState("");
  const load=useCallback(()=>Promise.all([api(BASE+"/commercial"),api(BASE+"/service-plan")]).then(([d,p])=>{setData(d);setPlan(p);setError("")}).catch(e=>setError(e.message)),[]);
  useEffect(()=>{void load()},[load]);
- return <div className="panel commerce"><div className="panelhead"><div><h2>Contrato e licenças</h2><p>Condições definidas pelo seu Master</p></div><button className="outline" onClick={load}>Atualizar</button></div>
+ return <div className="panel commerce"><div className="panelhead"><div><h2>Contrato e licenças</h2><p>Condições definidas pela administração da Delta TV</p></div><button className="outline" onClick={load}>Atualizar</button></div>
   {error&&<div className="alert">{error}</div>}
   {!data?<div className="empty">Carregando condições comerciais…</div>:<>
    <div className="commercial-stats">
@@ -29,6 +30,7 @@ export function CommercialOverview(){
 }
 export function PartnerDevices(){
  const [auditId,setAuditId]=useState(null);
+ const [dnsMac,setDnsMac]=useState(null);
  const [loading,setLoading]=useState(true);
  const [showRemoved,setShowRemoved]=useState(false),[hiddenIds,setHiddenIds]=useState([]);
  const [q,setQ]=useState(""),[page,setPage]=useState(1),[data,setData]=useState({data:[],meta:{total:0,totalPages:1}}),[error,setError]=useState(""),[busy,setBusy]=useState(null),[tick,setTick]=useState(0);
@@ -53,7 +55,7 @@ export function PartnerDevices(){
   const reason=window.prompt("Motivo do desvínculo (obrigatório):", "Cliente saiu da parceria");if(!reason||reason.trim().length<3)return;
   setBusy(d.id);try{await api(`${BASE}/devices/${d.id}/revoke`,{method:"POST",body:{reason}});setHiddenIds(old=>[...old,d.id]);setTick(n=>n+1)}catch(e){setError(e.message)}finally{setBusy(null)};
  };
- return <section className="delta-tv-list">{auditId&&<ConnectionAudit path={`${BASE}/devices/${auditId}/connection-audit`} onClose={()=>setAuditId(null)}/>}<div className="heading"><p>Consulte as ativações da sua parceria. Use a pesquisa para localizar um dispositivo pelo MAC.</p><input className="search" placeholder="Buscar MAC" value={q} onChange={e=>{setQ(e.target.value);setPage(1)}}/></div>
+ return <section className="delta-tv-list">{dnsMac&&<Modal title={`DNS da TV ${dnsMac}`} onClose={()=>setDnsMac(null)} wide><DeviceDns api={api} base={`${BASE}/emergency-dns`} initialMac={dnsMac} onBack={()=>setDnsMac(null)}/></Modal>}{auditId&&<ConnectionAudit path={`${BASE}/devices/${auditId}/connection-audit`} onClose={()=>setAuditId(null)}/>}<div className="heading"><p>Consulte as ativações da sua parceria. Use a pesquisa para localizar um dispositivo pelo MAC.</p><input className="search" placeholder="Buscar MAC" value={q} onChange={e=>{setQ(e.target.value);setPage(1)}}/></div>
   <label><input type="checkbox" checked={showRemoved} onChange={e=>{setHiddenIds([]);setShowRemoved(e.target.checked);setPage(1)}}/> Mostrar removidos</label>
   <p>Desvincular mantém a TV cadastrada; excluir remove definitivamente somente o vínculo da sua parceria.</p>
   {bulk.toolbar}
@@ -62,6 +64,7 @@ export function PartnerDevices(){
    <div className="device-top"><b className="mono break">{bulk.pick(d)}{d.mac}</b><span className={`pill ${d.status==="active"?"healthy":d.status==="blocked"?"suspect":"down"}`}>{{active:"Ativo",blocked:"Bloqueado",revoked:"Removido"}[d.status]||"Indisponível"}</span></div>
    {d.live?.online && <div className="device-meta"><div><small>IP observado</small><strong>{d.live.ip || 'Indisponível'}</strong></div><div><small>Assistindo agora</small><strong>{d.live.playback?.title || 'Sem reprodução ativa'}</strong></div></div>}
    <div className="device-meta"><div><small>Código</small><strong>{d.code||"Não informado"}</strong></div><div><small>Ativado em</small><strong>{new Date(d.activatedAt).toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo"})}</strong></div><div><small>Origem da licença</small><strong>{d.licenseSource==="reseller_stock"?"Estoque de revenda":"Parceria"}</strong></div></div>
+   {d.status==="active"&&<button className="outline device-action" onClick={()=>setDnsMac(d.mac)}>Trocar DNS desta TV</button>}
    <button className="outline device-action" onClick={()=>setAuditId(d.id)}>Conexão / URL</button>
    {d.status!=="revoked"&&<button className="outline device-action" disabled={busy===d.id} onClick={()=>unlink(d)}>{busy===d.id?"Processando…":"Desvincular desta parceria"}</button>}
    <button className="outline device-action" disabled={busy===d.id} onClick={()=>exclude(d)}>Excluir vínculo</button>
