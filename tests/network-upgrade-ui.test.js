@@ -43,3 +43,21 @@ test('botão de WhatsApp só aparece para telefone brasileiro válido e abre end
  assert.match(css,/\.master-home-whatsapp\{display:inline-flex/);
  assert.match(css,/@media\(max-width:720px\)\{\.master-home-contact/);
 });
+
+
+test('confirmação de upgrade aparece em modal, não no rodapé da lista',()=>{
+ const upgrade=read('PlanUpgrade.jsx');
+ const css=read('style.css');
+ assert.match(upgrade,/quote&&<div className="overlay"/);
+ assert.match(upgrade,/className="modal upgrade-confirm" role="dialog" aria-modal="true"/);
+ assert.match(upgrade,/money\(quote\.amountCents\)/);
+ assert.match(upgrade,/const selectedPlan=data\?\.plans\.find\(p=>p\.key===selected\)/);
+ assert.match(upgrade,/Mensalidade do novo plano/);
+ assert.match(upgrade,/Valor proporcional a pagar agora/);
+ assert.match(upgrade,/onMouseDown=\{e=>\{if\(e\.target===e\.currentTarget&&!busy\)setQuote\(null\)\}\}/);
+ assert.match(upgrade,/e\.key==='Escape'/);
+ assert.match(upgrade,/onClick=\{pay\}/);
+ assert.match(upgrade,/>Cancelar<\/button>/);
+ assert.doesNotMatch(upgrade,/quote&&<div className="upgrade-confirm" role="region"/);
+ assert.match(css,/\.upgrade-confirm\{border-color:/);
+});
