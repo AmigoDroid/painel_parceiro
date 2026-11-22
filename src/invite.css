@@ -1,4 +1,4 @@
-.invite-wrap{min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 20% 15%,#21376b,#090e1b 70%)}
+.invite-wrap{min-height:100vh;min-height:100dvh;grid-template-columns:minmax(0,1fr);display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 20% 15%,#21376b,#090e1b 70%)}
 .invite-card{width:min(100%,480px);padding:32px;border:1px solid #344b74;border-radius:20px;background:#111e35;box-shadow:0 24px 90px #0006}
 .invite-card .brandico{margin-bottom:18px}.invite-card h1{font-size:27px;line-height:1.2;margin:10px 0 12px}.invite-card>p,.invite-help{color:#adc0dd;line-height:1.6;font-size:14px}
 .invite-eyebrow{letter-spacing:2px;font-weight:750;color:#83a9f8!important;font-size:11px!important}

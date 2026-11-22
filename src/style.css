@@ -372,3 +372,9 @@ button,select,input[type="checkbox"]{touch-action:manipulation}
 :focus-visible{outline:3px solid #96aaff;outline-offset:2px}
 @media(max-width:700px){.modal{max-height:calc(100dvh - 24px);overflow-y:auto;overscroll-behavior:contain}.entry small,.servercard p,.stat small{font-size:13px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+.loginwrap { min-height: 100dvh; grid-template-columns: minmax(0,1fr); }
+.loginwrap .login { padding: clamp(20px, 5vw, 38px); }
+.modal :where(fieldset, label, input, select, textarea) { min-width: 0; max-width: 100%; }
+.servercard .between > b, .invite-card, .modal h2 { overflow-wrap: anywhere; }
+@media (max-height: 480px) { .loginwrap { padding-block: 12px; } }

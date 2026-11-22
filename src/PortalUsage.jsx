@@ -19,7 +19,7 @@ export default function PortalUsage(){
   <div style={{display:'flex',gap:10,alignItems:'end',flexWrap:'wrap'}}><label style={{display:'grid',gap:4}}>Mês (UTC)<input type="month" value={month} onChange={e=>setMonth(e.target.value)}/></label><button type="button" onClick={()=>void load()} disabled={busy}>Atualizar</button></div>
   {error&&<p role="alert" className="alert">{error}</p>}
   {view&&<>
-    <div className="stats" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(145px,1fr))',gap:10}}>
+    <div className="stats" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%, 145px),1fr))',gap:10}}>
      <div className="stat"><small>Saída Node medida</small><strong>{gb(view.totals.nodeGb)}</strong><span>Inclui HLS</span></div>
      <div className="stat"><small>Proxy Nginx</small><strong>{view.totals.nginxUnmeteredRequests}</strong><span>Requisições sem bytes medidos</span></div>
      <div className="stat"><small>Redirects</small><strong>{view.totals.redirectRequests}</strong><span>Mídia entregue pela origem</span></div>

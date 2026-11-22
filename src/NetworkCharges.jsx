@@ -7,7 +7,7 @@ function LocalQr({value}){
  const matrix=useMemo(()=>{try{return value?qrMatrix(value):[]}catch{return []}},[value]);
  const size=matrix.length;
  if(!size)return <p role="alert">QR indisponível. Utilize o código de pagamento abaixo.</p>;
- return <svg aria-label="Código QR de pagamento" role="img" viewBox={`-4 -4 ${size+8} ${size+8}`} width="220" height="220" style={{maxWidth:'100%',background:'#fff',padding:10}} shapeRendering="crispEdges">
+ return <svg aria-label="Código QR de pagamento" role="img" viewBox={`-4 -4 ${size+8} ${size+8}`} width="220" height="220" style={{maxWidth:'100%',height:'auto',background:'#fff',padding:10}} shapeRendering="crispEdges">
   <rect x={-4} y={-4} width={size+8} height={size+8} fill="#fff"/>
   {matrix.flatMap((row,y)=>row.map((on,x)=>on?<rect key={`${x}-${y}`} x={x} y={y} width={1} height={1} fill="#000"/>:null))}
  </svg>;
@@ -35,7 +35,7 @@ export default function NetworkCharges(){
     {(c.breakdown.waiverFeeCents+c.breakdown.waiverInterestCents)>0&&<div>Abono de encargos: −{money(c.breakdown.waiverFeeCents+c.breakdown.waiverInterestCents)}</div>}
     <div><b>Total: {money(c.breakdown.totalCents)}</b></div></div>}
    <p>Vence em {new Date(c.expiresAt).toLocaleString('pt-BR')}</p>
-   {text&&<div style={{display:'grid',gap:12,justifyItems:'start'}}><LocalQr value={text}/><p>{c.pixCode?'Pix copia e cola':'QR do checkout seguro. O texto abaixo é um link, não um código Pix BR.'}</p>
+   {text&&<div style={{display:'grid',gridTemplateColumns:'minmax(0,1fr)',gap:12,justifyItems:'start'}}><LocalQr value={text}/><p>{c.pixCode?'Pix copia e cola':'QR do checkout seguro. O texto abaixo é um link, não um código Pix BR.'}</p>
     <textarea className="break" aria-label={c.pixCode?'Pix copia e cola':'Link de pagamento'} value={text} readOnly rows={3} style={{width:'100%',maxWidth:430}}/>
     <button className="primary" type="button" onClick={()=>copy(text)}>{c.pixCode?'Copiar Pix':'Copiar link de pagamento'}</button>
     {c.checkoutUrl&&<a className="outline" href={c.checkoutUrl} target="_blank" rel="noopener noreferrer">Abrir pagamento</a>}
