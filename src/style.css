@@ -378,3 +378,14 @@ button,select,input[type="checkbox"]{touch-action:manipulation}
 .modal :where(fieldset, label, input, select, textarea) { min-width: 0; max-width: 100%; }
 .servercard .between > b, .invite-card, .modal h2 { overflow-wrap: anywhere; }
 @media (max-height: 480px) { .loginwrap { padding-block: 12px; } }
+
+/* Acesso direto ao suporte na página inicial do parceiro. */
+.partner-support-card{display:grid;gap:16px;margin:20px 0;padding:20px;border:1px solid #6553a7;border-radius:22px;background:linear-gradient(115deg,#201b3b,#222a48);min-width:0}
+.partner-support-heading{display:flex;align-items:center;gap:14px;min-width:0}
+.partner-support-heading h2{margin:0;font-size:clamp(20px,3vw,28px);line-height:1.25}
+.partner-support-icon{width:54px;height:54px;flex:none;display:grid;place-items:center;border-radius:17px;background:#514085;color:#dfd6ff}
+.partner-support-icon svg{width:29px;height:29px}
+.partner-support-button{ text-decoration:none;width:100%;min-height:56px;display:flex;align-items:center;justify-content:center;gap:15px;border:0;border-radius:15px;background:#199a61;color:#fff;font-size:17px;font-weight:700;cursor:pointer}
+.partner-support-button:hover{background:#148654}
+.partner-support-button:focus-visible{outline:3px solid #c5b5ff;outline-offset:3px}
+@media(max-width:480px){.partner-support-card{padding:18px;border-radius:19px}.partner-support-heading h2{font-size:21px}}

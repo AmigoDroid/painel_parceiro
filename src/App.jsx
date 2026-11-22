@@ -33,7 +33,7 @@ const NAV_GROUPS=[
  {label:"Licenças",items:[["licenses","Licenças e ativações","shield"],["plans","Meu plano e upgrade","wallet"]]},
  {label:"Ativar aplicativo",items:[["codes","Códigos para ativar TVs","key"],["white-label","Meus aplicativos","download"],["web","Player Web","globe"],["downloads","Aplicativos","download"]]},
  {label:"Servidores e personalização",items:[["servers","Meus DNS","server"],["dns-emergencia","Troca emergencial de DNS","server"],["studio","Estúdio Visual","monitor"]]},
- {label:"Minha conta",items:[["account","Minha conta","account"],["tickets","Central de Suporte","help"],["access","Histórico de login","history"],["notifications","Notificações","bell"],["help","Guias e tutoriais","help"]]},
+ {label:"Minha conta",items:[["account","Minha conta","account"],["access","Histórico de login","history"],["notifications","Notificações","bell"],["help","Guias e tutoriais","help"]]},
 ];
 // Modo simples não pode esconder pagamentos, vigência ou acesso ao PlayerWeb.
 const SIMPLE_PARTNER = new Set(["overview", "support", "customers", "devices", "codes", "servers", "dns-emergencia", "notifications", "help", "tickets", "account", "billing", "plans", "licenses", "web", "downloads"]);
@@ -101,6 +101,8 @@ function PartnerPortalApp(){
  },[user?.id]);
  const showBadge=profileDetails?.profile?.showNotificationBadge!==false;
  const showUnread=profileDetails?.profile?.showUnreadBanner!==false;
+ const masterDigits=String(master?.phone||'').replace(/\D/g,'');
+ const masterWhatsapp=/^55\d{10,11}$/.test(masterDigits)?masterDigits:/^\d{10,11}$/.test(masterDigits)?`55${masterDigits}`:null;
  const [poolForm,setPoolForm]=useState(null),[editCode,setEditCode]=useState(null);
  const [deleteItem,setDeleteItem]=useState(null);
  // Diálogos operacionais: foco inicial, Escape, ciclo de Tab e retorno ao botão anterior.
@@ -227,7 +229,7 @@ function PartnerPortalApp(){
  <aside className={`aside ${mobileMenu?"mobile-open":""}`}>
   <div className="logo"><div className="brandico">D</div><div className="brandcopy">Delta TV<small>PORTAL DO PARCEIRO</small></div><button type="button" className="close mobile-close" aria-label="Fechar menu" onClick={()=>setMobileMenu(false)}><Icon name="x" size={20}/></button></div>
   
- {master&&<div className="master-contact"><strong>Fale com seu Master</strong><span>{master.name}</span>{master.phone?<a href={`tel:${master.phone.replace(/[^\d+]/g,'')}`}>{master.phone}</a>:<small>Telefone não cadastrado. Solicite ao Master que atualize o perfil.</small>}</div>}
+
   <nav className="nav" aria-label="Navegação do parceiro">{NAV_GROUPS.map(group=><div key={group.label} className="partner-nav-group"><span className="partner-nav-label">{group.label}</span>{group.items.filter(([id])=>(id!=="studio"||studioApps.length>0)&&(
  !simpleMode||SIMPLE_PARTNER.has(id)||screen===id)).map(([id,name,ico])=><button type="button" className={screen===id?"active":""} aria-current={screen===id?"page":undefined} key={id} data-help-target={({overview:"home", account:"profile", "white-label":"apps", studio:"studio", servers:"servers", codes:"codes", devices:"devices", licenses:"licenses", billing:"billing", notifications:"notifications", help:"help"})[id] || undefined} onClick={()=>navigate(id)}><span className="nav-icon"><Icon name={ico} size={19}/></span><span className="nav-text">{name}</span>{id==="notifications"&&showBadge&&unread>0&&<b className="nav-count">{unread}</b>}{screen===id&&<Icon name="chevronRight" size={14} className="nav-chevron"/>}</button>)}</div>)}</nav>
   <div className="sidefoot"><span className={`side-status-dot ${data.monitorEnabled?"is-on":""}`}/><div><span>Monitoramento</span><b>{data.monitorEnabled?"Ativado":"Desativado"}</b></div></div>
@@ -237,6 +239,10 @@ function PartnerPortalApp(){
  {simpleMode && screen!=="overview" && <EasyPageGuide role="partner" page={screen} onBack={()=>navigate("overview")}/>}
  <HelpExperience screen={screen} portal="content" userId={user.id} onNavigate={navigate}/>
  {screen==="overview"&&<AppInstallSpotlight onOpen={() => navigate("downloads")} />}
+ {screen==="overview"&&<section className="partner-support-card" aria-label="Contato com o suporte">
+   <div className="partner-support-heading"><span className="partner-support-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 13v-2a8 8 0 0 1 16 0v2"/><rect x="2" y="12" width="4" height="7" rx="2"/><rect x="18" y="12" width="4" height="7" rx="2"/><path d="M20 19a5 5 0 0 1-5 3h-3"/></svg></span><h2>Contate o Suporte</h2></div>
+   {masterWhatsapp?<a className="partner-support-button" href={`https://wa.me/${masterWhatsapp}`} target="_blank" rel="noopener noreferrer">Chamar Suporte <Icon name="arrow" size={23}/></a>:<p className="muted" role="status">WhatsApp do responsável pela rede indisponível. Solicite a atualização do telefone no perfil do administrador.</p>}
+ </section>}
  {screen==="overview"&&<EasyStart role="partner" onNavigate={navigate}/>}
  {screen==="overview"&&<section className="panel" style={{marginTop:16,padding:18,display:'grid',gap:10}}>
    <h3>Minha central de gerenciamento</h3><p className="muted">Acesse os dispositivos, DNS, suporte e recursos operacionais da sua parceria.</p>
