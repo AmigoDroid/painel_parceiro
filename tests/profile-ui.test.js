@@ -19,3 +19,10 @@ test("preferências e foto aparecem na navegação do parceiro", () => {
  assert.match(app, /showUnread&&unread>0/);
  assert.match(app, /profile-menu-avatar/);
 });
+
+test("clicar em Minha conta abre a tela, com opções e sair acessíveis separadamente", () => {
+ assert.match(app, /className="profile-trigger"[^>]*onClick=\{\(\)=>navigate\("account"\)\}/);
+ assert.match(app, /className="profile-menu-toggle"[^>]*aria-label="Abrir opções da conta"/);
+ assert.match(app, /className="logout-item" onClick=\{signOut\}/);
+ assert.match(app, /\["account","Minha conta","account"\]/);
+});

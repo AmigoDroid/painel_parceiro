@@ -104,8 +104,10 @@ button,select,input[type="checkbox"]{touch-action:manipulation}
 .header-refresh:hover,.header-notifications:hover,.profile-trigger:hover{background:#202e49;border-color:#574f88;color:#f5f2ff}
 .header-notifications{width:42px;padding:0;position:relative}
 .notif-dot{height:8px;width:8px;border:2px solid #172238;background:#ff789e;border-radius:50%;position:absolute;top:8px;right:9px}
-.profile-wrap{position:relative}
+.profile-wrap{position:relative;display:flex;align-items:center;gap:4px}
 .profile-trigger{min-width:0;padding:4px 9px 4px 5px;text-align:left}
+.profile-menu-toggle{height:41px;width:27px;padding:0;background:#172238;border:1px solid #32415b;border-radius:10px;color:#c9d7ec;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.profile-menu-toggle:hover{background:#202e49;border-color:#574f88;color:#f5f2ff}
 .profile-trigger .avatar{width:32px;height:32px;border-radius:10px;background:linear-gradient(145deg,#8a79e3,#51418f);color:#fff;box-shadow:none;font-size:14px}
 .profile-identity{display:grid;gap:2px;min-width:0;max-width:135px}
 .profile-identity b{font-size:12px;color:#f2f3ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
