@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from './api.js';
+import './plan-upgrade.css';
 
 const money=cents=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(cents||0)/100);
 const limit=n=>n==null?'Sem limite':String(n);
@@ -21,8 +22,8 @@ export default function PlanUpgrade({onPayment,master}) {
  };
  return <section className="panel plan-upgrade">
   <div className="plan-market-header">
-   <div><span className="plan-market-eyebrow">{master?.name?`Planos de ${master.name}`:"Planos oferecidos pelo seu Master"}</span><h2>Encontre o plano ideal para sua operação</h2>
-    <p>Compare os recursos e limites dos planos que seu Master disponibilizou. Os valores são definidos pela sua rede, não pelo catálogo da DeltaTV.</p></div>
+   <div><span className="plan-market-eyebrow">{master?.name?`Planos de ${master.name}`:"Planos oferecidos pelo seu Master"}</span><h2>Meu plano e upgrade</h2>
+    <p>Veja seu plano atual, compare as opções da sua rede e escolha um upgrade com o valor confirmado antes de pagar.</p></div>
    <button className="outline" type="button" onClick={load} disabled={busy}>Atualizar planos</button>
   </div>
   {error&&<p role="alert" className="alert">{error}</p>}
@@ -31,7 +32,7 @@ export default function PlanUpgrade({onPayment,master}) {
   {data&&!data.current&&<p className="commercial-info">Ainda não há um plano vinculado ao seu contrato. Consulte seu Master para definir o plano inicial.</p>}
   {data&&!data.available&&data.current&&<p className="commercial-info">{data.reason||'Seu contrato não permite upgrade automático neste momento. Para alterar seu plano, fale com seu Master.'}</p>}
   {data&&data.plans.length===0&&<p className="commercial-info">Seu Master ainda não disponibilizou planos públicos para contratação. Entre em contato para conhecer as opções.</p>}
-  {data?.plans.length>0&&<div className="plan-market-intro"><div><h3>Planos disponíveis na sua rede</h3><p>Você pode comparar todos os planos publicados. Planos com preço maior que o atual podem ser contratados como upgrade, desde que seu contrato permita. Confira os recursos antes de pagar.</p></div><span>{data.plans.length} {data.plans.length===1?'plano':'planos'}</span></div>}
+  {data?.plans.length>0&&<div className="plan-market-intro"><div><h3>Planos disponíveis na sua rede</h3><p>Confira valores, limites e recursos de cada opção antes de continuar.</p></div><span>{data.plans.length} {data.plans.length===1?'plano':'planos'}</span></div>}
   <div className="plan-market-grid">{data?.plans.map(p=><article className={`plan-market-card${p.isCurrent?' is-current':''}${p.canUpgrade?' is-upgrade':''}`} key={p.key}>
    <div className="plan-market-card-top"><span className="plan-market-tag">{p.isCurrent?'Plano atual':p.canUpgrade?'Upgrade disponível':'Consulte o Master'}</span><h3>{p.name}</h3><p>{p.description||'Plano disponibilizado pelo seu Master.'}</p></div>
    <div className="plan-market-price"><strong>{p.monthlyPriceCents==null?'Sob consulta':money(p.monthlyPriceCents)}</strong>{p.monthlyPriceCents!=null&&<span>/ mês</span>}</div>
@@ -50,17 +51,19 @@ export default function PlanUpgrade({onPayment,master}) {
     {p.canManageGateways&&<div><dt>Gateways próprios</dt><dd className="is-included">Incluídos</dd></div>}
    </dl>
    <div className="plan-market-action">
-    {p.canUpgrade?<button className="primary" type="button" disabled={busy} onClick={()=>preview(p.key)}>Fazer upgrade</button>
+    {p.canUpgrade?<button className="primary" type="button" disabled={busy} onClick={()=>preview(p.key)}>{busy&&selected===p.key?'Consultando valor…':'Fazer upgrade'}</button>
      :<span>{p.isCurrent?'Você já utiliza este plano':'Para contratar ou reduzir o plano, fale com seu Master'}</span>}
    </div>
   </article>)}</div>
   {quote&&<div className="overlay" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget&&!busy)setQuote(null)}}>
    <div className="modal upgrade-confirm" role="dialog" aria-modal="true" aria-labelledby="upgrade-dialog-title" aria-describedby="upgrade-dialog-description">
     <div className="between"><h2 id="upgrade-dialog-title">Confirmar upgrade</h2><button type="button" className="close" aria-label="Fechar confirmação" autoFocus disabled={busy} onClick={()=>setQuote(null)}>×</button></div>
-    <p>Plano escolhido: <strong>{selectedPlan?.name}</strong></p>
-    {selectedPlan?.monthlyPriceCents!=null&&<p>Mensalidade do novo plano: <strong>{money(selectedPlan.monthlyPriceCents)}</strong>.</p>}
-    <p id="upgrade-dialog-description">Valor integral a pagar agora: <strong>{money(quote.amountCents)}</strong>.</p>
-    <p>Seu plano só será alterado após a confirmação do pagamento. Você será encaminhado às cobranças para pagar.</p>
+    <div className="upgrade-confirm-summary" id="upgrade-dialog-description">
+     <div><span>Plano escolhido</span><strong>{selectedPlan?.name}</strong></div>
+     {selectedPlan?.monthlyPriceCents!=null&&<div><span>Mensalidade do novo plano</span><strong>{money(selectedPlan.monthlyPriceCents)}</strong></div>}
+     <div className="upgrade-total"><span>Valor integral agora</span><strong>{money(quote.amountCents)}</strong></div>
+    </div>
+    <p>O novo plano será ativado após a confirmação do pagamento. Você será encaminhado às cobranças para pagar.</p>
     <div className="modalfoot"><button className="outline" type="button" disabled={busy} onClick={()=>setQuote(null)}>Cancelar</button><button className="primary" type="button" disabled={busy} onClick={pay}>{busy?'Processando…':'Gerar cobrança e pagar'}</button></div>
    </div>
   </div>}

@@ -1,0 +1,226 @@
+/* Meu Plano e Upgrade: estilos exclusivos desta tela, sem afetar outros paineis. */
+.plan-upgrade.panel {
+  padding: 0;
+  margin: 0 0 18px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+  min-width: 0;
+}
+.plan-upgrade .plan-market-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 22px;
+  padding: clamp(21px, 3vw, 30px);
+  border: 1px solid #403b66;
+  border-radius: 19px;
+  background: radial-gradient(ellipse at 100% -20%, #6355a83e, transparent 55%), linear-gradient(130deg, #202542, #151e31 68%);
+}
+.plan-upgrade .plan-market-header > div { flex: 1; min-width: 0; }
+.plan-upgrade .plan-market-eyebrow {
+  color: #bdaeff;
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+.plan-upgrade .plan-market-header h2 {
+  margin: 9px 0 8px;
+  font-size: clamp(21px, 2.6vw, 29px);
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -.035em;
+  color: #f3f4ff;
+}
+.plan-upgrade .plan-market-header p {
+  max-width: 670px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #b4c0d7;
+}
+.plan-upgrade .plan-market-header .outline {
+  flex: 0 0 auto;
+  min-height: 42px;
+  white-space: normal;
+  background: #ffffff0d;
+  border-color: #6c6894;
+  color: #e5e3ff;
+}
+.plan-upgrade .plan-market-header .outline:hover { background: #ffffff19; }
+.plan-upgrade .plan-market-current {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 22px;
+  min-width: 0;
+  margin-top: 16px;
+  padding: 20px 24px;
+  border: 1px solid #376d70;
+  border-radius: 16px;
+  background: linear-gradient(115deg, #18343b, #152738 75%);
+}
+.plan-upgrade .plan-market-current > div { flex: 1; min-width: 0; }
+.plan-upgrade .plan-market-current span {
+  display: block;
+  color: #85dccb;
+  font-weight: 800;
+  font-size: 10px;
+  letter-spacing: .12em;
+}
+.plan-upgrade .plan-market-current h3 {
+  margin: 7px 0 5px;
+  font-size: clamp(18px, 2vw, 23px);
+  color: #f2fcff;
+  overflow-wrap: anywhere;
+}
+.plan-upgrade .plan-market-current p { margin: 0; color: #a9bdcd; font-size: 12.5px; line-height: 1.45; }
+.plan-upgrade .plan-market-current > strong {
+  flex: 0 1 auto;
+  color: #e9fffa;
+  font-size: clamp(18px, 2.1vw, 25px);
+  font-weight: 850;
+  letter-spacing: -.025em;
+  text-align: right;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.plan-upgrade .plan-market-intro {
+  margin: 28px 0 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 14px;
+}
+.plan-upgrade .plan-market-intro > div { min-width: 0; }
+.plan-upgrade .plan-market-intro h3 { margin: 0 0 5px; font-size: 19px; letter-spacing: -.02em; color: #f0f5ff; }
+.plan-upgrade .plan-market-intro p { max-width: 800px; margin: 0; line-height: 1.55; color: #9fb2ce; font-size: 12.5px; }
+.plan-upgrade .plan-market-intro > span {
+  flex: 0 0 auto;
+  padding: 7px 11px;
+  border-radius: 99px;
+  border: 1px solid #41516c;
+  background: #202b40;
+  color: #c9d6ee;
+  font-size: 11px;
+  font-weight: 750;
+}
+.plan-upgrade .plan-market-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 275px), 1fr));
+  gap: 15px;
+  min-width: 0;
+  align-items: stretch;
+}
+.plan-upgrade .plan-market-card {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 23px 21px 18px;
+  border: 1px solid #35445e;
+  border-radius: 18px;
+  background: linear-gradient(155deg, #1b2a40, #131d2e 82%);
+  box-shadow: 0 10px 29px #00000018;
+}
+.plan-upgrade .plan-market-card.is-upgrade { border-color: #7b6bc4; background: linear-gradient(157deg, #262845, #172039 53%, #121c2e); }
+.plan-upgrade .plan-market-card.is-current { border-color: #3b7270; }
+.plan-upgrade .plan-market-card-top { min-width: 0; }
+.plan-upgrade .plan-market-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 100px;
+  background: #2c3b56;
+  color: #c7d5ed;
+  font-size: 10.5px;
+  font-weight: 800;
+  line-height: 1.3;
+}
+.plan-upgrade .is-upgrade .plan-market-tag { background: #473873; color: #e4d9ff; }
+.plan-upgrade .is-current .plan-market-tag { background: #22504c; color: #a8f0df; }
+.plan-upgrade .plan-market-card h3 {
+  font-size: clamp(18px, 1.9vw, 21px);
+  letter-spacing: -.02em;
+  line-height: 1.3;
+  color: #f5f7ff;
+  margin: 16px 0 6px;
+  overflow-wrap: anywhere;
+}
+.plan-upgrade .plan-market-card-top p { color: #a6b5cf; line-height: 1.55; margin: 0; min-height: 40px; font-size: 12.5px; }
+.plan-upgrade .plan-market-price {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 21px;
+  min-width: 0;
+}
+.plan-upgrade .plan-market-price strong { font-size: clamp(24px, 2.9vw, 32px); font-weight: 850; color: #f6f8ff; letter-spacing: -.04em; line-height: 1.14; overflow-wrap: anywhere; }
+.plan-upgrade .plan-market-price span { font-size: 12px; color: #9baecb; }
+.plan-upgrade .plan-market-divider { height: 1px; background: #39465f; margin: 20px 0 6px; }
+.plan-upgrade .plan-market-features { margin: 0 0 16px; min-width: 0; }
+.plan-upgrade .plan-market-features > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #ffffff0e;
+}
+.plan-upgrade .plan-market-features > div:last-child { border-bottom: 0; }
+.plan-upgrade .plan-market-features dt { font-size: 12px; line-height: 1.4; color: #a8b8d0; min-width: 0; }
+.plan-upgrade .plan-market-features dd { margin: 0; font-size: 12px; font-weight: 750; color: #d1dced; text-align: right; line-height: 1.45; overflow-wrap: anywhere; min-width: 0; }
+.plan-upgrade .plan-market-features dd.is-included { color: #89dfbc; }
+.plan-upgrade .plan-market-action { margin-top: auto; padding-top: 8px; min-width: 0; }
+.plan-upgrade .plan-market-action .primary { width: 100%; min-height: 46px; white-space: normal; background: #8266e7; border: 1px solid #a291f3; }
+.plan-upgrade .plan-market-action .primary:hover:not(:disabled) { background: #987df5; }
+.plan-upgrade .plan-market-action > span { display: block; padding: 13px 7px; color: #9eafca; font-size: 12px; text-align: center; line-height: 1.5; }
+.plan-upgrade > .commercial-info { margin: 16px 0 0; border: 1px solid #35445d; border-radius: 12px; background: #192437; padding: 13px 16px; color: #b9c7dc; font-size: 12.5px; line-height: 1.6; }
+.plan-upgrade > .alert { margin: 15px 0; }
+.plan-upgrade > .empty { margin-top: 14px; padding: 36px 18px; border: 1px solid #35435e; border-radius: 15px; background: #172235; }
+/* Confirmacao isolada: nenhum estilo global de modal e alterado. */
+.plan-upgrade .overlay { z-index: 70; }
+.plan-upgrade .upgrade-confirm {
+  width: min(100%, 540px);
+  min-width: 0;
+  padding: 25px;
+  background: #172239;
+  border: 1px solid #57658a;
+}
+.plan-upgrade .upgrade-confirm .between { align-items: center; margin-bottom: 13px; }
+.plan-upgrade .upgrade-confirm h2 { font-size: 21px; margin: 0; }
+.plan-upgrade .upgrade-confirm > p { color: #b4c2db; font-size: 13px; line-height: 1.6; margin: 9px 0; }
+.plan-upgrade .upgrade-confirm > p strong { color: #f2f4ff; }
+.plan-upgrade .upgrade-confirm-summary { margin: 15px 0; border: 1px solid #42516c; border-radius: 14px; padding: 15px 17px; background: #111d30; }
+.plan-upgrade .upgrade-confirm-summary > div { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; font-size: 13px; line-height: 1.5; }
+.plan-upgrade .upgrade-confirm-summary > div + div { margin-top: 12px; }
+.plan-upgrade .upgrade-confirm-summary span { color: #adbed8; }
+.plan-upgrade .upgrade-confirm-summary strong { color: #eff3ff; text-align: right; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.plan-upgrade .upgrade-confirm-summary .upgrade-total { padding-top: 13px; border-top: 1px solid #40506a; }
+.plan-upgrade .upgrade-confirm-summary .upgrade-total strong { font-size: clamp(20px, 4vw, 27px); color: #b7a5ff; letter-spacing: -.035em; }
+.plan-upgrade .upgrade-confirm .modalfoot { display: flex; gap: 10px; }
+.plan-upgrade .upgrade-confirm .modalfoot button { min-height: 45px; flex: 1 1 0; white-space: normal; }
+.plan-upgrade .upgrade-confirm .modalfoot .primary { background: #8266e7; }
+@media (max-width: 720px) {
+  .plan-upgrade .plan-market-header { flex-direction: column; align-items: stretch; padding: 21px 18px; }
+  .plan-upgrade .plan-market-header .outline { width: 100%; }
+  .plan-upgrade .plan-market-current { flex-direction: column; align-items: flex-start; padding: 18px; gap: 13px; }
+  .plan-upgrade .plan-market-current > strong { text-align: left; }
+  .plan-upgrade .plan-market-card { padding: 20px 17px 17px; }
+  .plan-upgrade .plan-market-intro { align-items: flex-start; }
+  .plan-upgrade .upgrade-confirm { padding: 19px; max-height: calc(100dvh - 20px); overflow-y: auto; }
+}
+@media (max-width: 390px) {
+  .plan-upgrade .plan-market-intro { flex-direction: column; gap: 9px; }
+  .plan-upgrade .plan-market-features > div { gap: 7px; }
+  .plan-upgrade .plan-market-features dt, .plan-upgrade .plan-market-features dd { font-size: 11.5px; }
+  .plan-upgrade .upgrade-confirm-summary > div { flex-direction: column; align-items: flex-start; gap: 2px; }
+  .plan-upgrade .upgrade-confirm-summary strong { text-align: left; }
+  .plan-upgrade .upgrade-confirm .modalfoot { flex-direction: column-reverse; }
+  .plan-upgrade .upgrade-confirm .modalfoot button { width: 100%; flex-basis: auto; }
+}
+@media (prefers-reduced-motion: reduce) { .plan-upgrade * { transition: none !important; } }

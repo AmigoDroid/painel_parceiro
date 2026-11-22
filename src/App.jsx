@@ -261,7 +261,7 @@ function PartnerPortalApp(){
  {screen==="tickets"&&<TicketCenter/>}
  {screen==="downloads"&&<AppDownloads/>}
  {screen==="account"&&<PartnerAccount/>}
- {screen==="plans"&&<><CommercialOverview/><PlanUpgrade onPayment={()=>navigate("billing")}/></>}
+ {screen==="plans"&&<><PlanUpgrade master={master} onPayment={()=>navigate("billing")}/><CommercialOverview/></>}
  {screen==="devices"&&<PartnerDevices/>}
  {screen==="overview"&&<>
    {(!data.providers?.length || !data.totalCodes || data.providers?.some(p=>p.health?.state==="down"))&&
