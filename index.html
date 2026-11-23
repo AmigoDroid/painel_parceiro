@@ -20,6 +20,18 @@
   // Identifica convites ANTES de carregar o portal principal. Evita depender
   // do App.jsx / WebSocket / modulos privados quando a rota e publica.
   (() => {
+  // Entrada pública isolada: remove app, MAC e token da barra antes dos imports.
+    if (/^\/upload\/playlist\/?$/.test(location.pathname)) {
+    const url = new URL(location.href);
+    window.__PUBLIC_APP_QR__ = {
+      app: url.searchParams.get('app') || '',
+      mac: url.searchParams.get('mac') || '',
+      token: url.searchParams.get('t') || '',
+    };
+    history.replaceState(history.state, '', '/upload/playlist');
+    document.title = 'Cadastro de lista';
+    return;
+    }
     const url = new URL(window.location.href);
     const pathMatch = url.pathname.match(/^\/convite\/([^/]+)\/?$/);
     const commercialMatch = url.pathname.match(/^\/convite-comercial\/([^/]+)\/?$/);
@@ -53,20 +65,21 @@
   <div id="root"></div>
   <script src="/pwa-register.js" defer></script>
   <script type="module">
-    const isReset = /^\/redefinir-senha\/?$/.test(window.location.pathname);
+    const isPublicQr = !!window.__PUBLIC_APP_QR__;
+    const isReset = !isPublicQr && /^\/redefinir-senha\/?$/.test(window.location.pathname);
     if (isReset) {
       const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
       window.__DELTA_PASSWORD_RESET_TOKEN__ = hash.get("token") || "";
       window.history.replaceState(window.history.state, "", "/redefinir-senha");
     }
-    const isInvite = !isReset && !!window.__DELTA_PARTNER_INVITE_REQUEST__;
+    const isInvite = !isPublicQr && !isReset && !!window.__DELTA_PARTNER_INVITE_REQUEST__;
     if (isInvite) {
       document.getElementById("root").innerHTML = '<main style="min-height:100vh;display:grid;place-items:center;background:#090d17;color:#fff;font:16px system-ui,sans-serif;padding:24px"><p>Carregando página de convite...</p></main>';
     }
     // Imports independentes: uma falha em um modulo do painel privado nao
     // bloqueia a pagina publica de cadastro.
     // Sem top-level await: compativel com o target padrao do Vite (ES2020).
-    const entry = isReset
+    const entry = isPublicQr ? import("./src/public-upload-entry.jsx") : isReset
       ? import("./src/reset-entry.jsx")
       : isInvite ? import("./src/invite-entry.jsx") : import("./src/main.jsx");
     entry.catch((error) => {
