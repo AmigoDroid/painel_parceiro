@@ -18,7 +18,8 @@ import {CommercialOverview,PartnerDevices,CreditAllocationModal} from "./Commerc
 import { Customers, LicensesAndActivations, Messages, AccessHistory, BillingHistory, AppDownloads, CreditsLedger, WebPlayer, PartnerAccount } from "./PartnerOperations.jsx";
 import { connectRealtime } from "./realtime.js";
 import Icon from "./Icon.jsx";
-import WhiteLabelApps from "./WhiteLabelApps.jsx";
+import WhiteLabelApps from './WhiteLabelApps.jsx';
+import PartnerUnlinkedApps from '@deltatv/ui/PartnerUnlinkedApps';
 import AppearanceStudio from "./AppearanceStudio.jsx";
 import HelpExperience from "./HelpExperience.jsx";
 import InviteRegistration from "./InviteRegistration.jsx";
@@ -29,14 +30,14 @@ import { consumeInviteRequest } from "./invite-link.js";
 const NAV_GROUPS=[
  {label:"Visão geral",items:[["overview","Início","dashboard"]]},
  {label:"Pagamentos",items:[["billing","Faturas e pagamentos","receipt"],["credits","Créditos e extrato","coins"]]},
- {label:"Dispositivos",items:[["devices","Minhas TVs","monitor"],["customers","Clientes","users"],["support","Resolver problema da TV","activity"]]},
+ {label:"Dispositivos",items:[["devices","Minhas TVs","monitor"],["unlinked","TVs sem vínculo","monitor"],["customers","Clientes","users"],["support","Resolver problema da TV","activity"]]},
  {label:"Licenças",items:[["licenses","Licenças e ativações","shield"],["plans","Meu plano e upgrade","wallet"]]},
- {label:"Ativar aplicativo",items:[["codes","Códigos para ativar TVs","key"],["white-label","Meus aplicativos","download"],["web","Player Web","globe"],["downloads","Aplicativos","download"]]},
+ {label:"Ativar aplicativo",items:[["codes","Códigos para ativar TVs","key"],["white-label","Meus Apps","download"],["web","Player Web","globe"],["downloads","Aplicativos","download"]]},
  {label:"Servidores e personalização",items:[["servers","Meus DNS","server"],["dns-emergencia","Troca emergencial de DNS","server"],["studio","Estúdio Visual","monitor"]]},
  {label:"Minha conta",items:[["account","Minha conta","account"],["access","Histórico de login","history"],["notifications","Notificações","bell"],["help","Guias e tutoriais","help"]]},
 ];
 // Modo simples não pode esconder pagamentos, vigência ou acesso ao PlayerWeb.
-const SIMPLE_PARTNER = new Set(["overview", "support", "customers", "devices", "codes", "servers", "dns-emergencia", "notifications", "help", "tickets", "account", "billing", "plans", "licenses", "web", "downloads"]);
+const SIMPLE_PARTNER = new Set(["overview", "support", "customers", "devices", "unlinked", "white-label", "codes", "servers", "dns-emergencia", "notifications", "help", "tickets", "account", "billing", "plans", "licenses", "web", "downloads"]);
 const SCREEN_SUBTITLES={
  overview:"Acompanhe sua operação, códigos e infraestrutura em um só lugar.",
  customers:"Gerencie os clientes associados à sua parceria.",
@@ -45,7 +46,8 @@ const SCREEN_SUBTITLES={
  licenses:"Acompanhe licenças e ativações do seu contrato.",
  codes:"Organize os códigos de parceria e seus servidores.",
  web:"Gerencie o acesso ao Player Web dos seus clientes.",
- "white-label":"Controle seus aplicativos white-label, servidores e ativações.",
+ "white-label":"Gerencie seus apps próprios e white-label.",
+ unlinked:"Vincule TVs dos seus aplicativos por usuário e senha.",
  studio:"Personalize o visual e publique novos temas para seus aplicativos Roku.",
  servers:"Configure e acompanhe seus servidores de conteúdo.",
  "dns-emergencia":"Troque a DNS dos códigos selecionados por um período limitado, mantendo o failover automático.",
@@ -78,7 +80,12 @@ function PartnerPortalApp(){
  const [user,setUser]=useState((panelAllows("parceiro",getAuth()?.user)?getAuth().user:null)),[screen,setScreen]=useState(readPartnerRoute);
  const [simpleMode,setSimpleMode]=useSimpleMode("parceiro");
  const [studioApps,setStudioApps]=useState([]);
+ const [ownedAppCount,setOwnedAppCount]=useState(0);
  const [master,setMaster]=useState(null);
+ useEffect(()=>{if(!user?.id)return;let active=true;
+  api('/partner/apps').then(r=>{if(active)setOwnedAppCount(r.data?.length || 0)}).catch(()=>{if(active)setOwnedAppCount(0)});
+  return()=>{active=false};
+ },[user?.id]);
  useEffect(()=>{if(!user)return;let live=true;
   api('/partner/network-charges/master').then(m=>{if(live)setMaster(m)}).catch(()=>{if(live)setMaster(null)});
   return()=>{live=false};
@@ -230,11 +237,11 @@ function PartnerPortalApp(){
   <div className="logo"><div className="brandico">D</div><div className="brandcopy">Delta TV<small>PORTAL DO PARCEIRO</small></div><button type="button" className="close mobile-close" aria-label="Fechar menu" onClick={()=>setMobileMenu(false)}><Icon name="x" size={20}/></button></div>
   
 
-  <nav className="nav" aria-label="Navegação do parceiro">{NAV_GROUPS.map(group=><div key={group.label} className="partner-nav-group"><span className="partner-nav-label">{group.label}</span>{group.items.filter(([id])=>(id!=="studio"||studioApps.length>0)&&(
+  <nav className="nav" aria-label="Navegação do parceiro">{NAV_GROUPS.map(group=><div key={group.label} className="partner-nav-group"><span className="partner-nav-label">{group.label}</span>{group.items.filter(([id])=>(id!=="studio"||studioApps.length>0)&&(id!=="unlinked"||ownedAppCount>0)&&(
  !simpleMode||SIMPLE_PARTNER.has(id)||screen===id)).map(([id,name,ico])=><button type="button" className={screen===id?"active":""} aria-current={screen===id?"page":undefined} key={id} data-help-target={({overview:"home", account:"profile", "white-label":"apps", studio:"studio", servers:"servers", codes:"codes", devices:"devices", licenses:"licenses", billing:"billing", notifications:"notifications", help:"help"})[id] || undefined} onClick={()=>navigate(id)}><span className="nav-icon"><Icon name={ico} size={19}/></span><span className="nav-text">{name}</span>{id==="notifications"&&showBadge&&unread>0&&<b className="nav-count">{unread}</b>}{screen===id&&<Icon name="chevronRight" size={14} className="nav-chevron"/>}</button>)}</div>)}</nav>
   <div className="sidefoot"><span className={`side-status-dot ${data.monitorEnabled?"is-on":""}`}/><div><span>Monitoramento</span><b>{data.monitorEnabled?"Ativado":"Desativado"}</b></div></div>
  </aside>
- <section className="main"><div style={{padding:"14px 22px 0"}}><TaskFinder tasks={TASKS.filter(task=>(task.route!=="studio"||studioApps.length>0))} onNavigate={navigate} /></div><header className="app-header"><div className="header-left"><button type="button" className="partner-menu" aria-label="Abrir menu" onClick={()=>setMobileMenu(true)}><Icon name="menu" size={21}/></button><div className="page-heading"><div className="eyebrow"><span className="eyebrow-dot"/>{data.servicePlan?.features?.label||"PARCEIRO DE CONTEÚDO"}</div><h1>{SCREEN_TITLES[screen]||"Painel do parceiro"}</h1><p className="page-subtitle">{SCREEN_SUBTITLES[screen]||"Gerencie sua parceria"}</p></div></div><div className="topright"><button type="button" className="easy-mode-button" aria-pressed={!simpleMode} onClick={()=>setSimpleMode(v=>!v)}>{simpleMode?"Modo simples · mostrar tudo":"Modo completo · simplificar"}</button><button type="button" className="header-refresh" data-help-target="context-help" onClick={()=>window.dispatchEvent(new CustomEvent("deltatv-help-context",{detail:{screen}}))}>? Ajuda</button><button type="button" className="header-refresh" onClick={refresh} title="Atualizar informações"><Icon name="refresh" size={18}/><span>Atualizar</span></button><button type="button" className="header-notifications" aria-label={`Notificações${unread?` (${unread} não lidas)`:""}`} onClick={()=>navigate("notifications")}><Icon name="bell" size={19}/>{showBadge&&unread>0&&<span className="notif-dot"/>}</button><div className="profile-wrap"><button type="button" className="profile-trigger" aria-haspopup="menu" aria-expanded={profileMenu} onClick={()=>navigate("account")}><span className="avatar">{profileDetails?.profile?.avatarData?<img src={profileDetails.profile.avatarData} className="profile-menu-avatar" alt=""/>:(user.name||user.email||"P")[0].toUpperCase()}</span><span className="profile-identity"><b>{user.name||"Parceiro"}</b><small>Minha conta</small></span></button><button type="button" className="profile-menu-toggle" aria-label="Abrir opções da conta" aria-haspopup="menu" aria-expanded={profileMenu} onClick={()=>setProfileMenu(v=>!v)}><Icon name="chevron" size={16}/></button>{profileMenu&&<><button type="button" className="profile-dismiss" aria-label="Fechar menu da conta" onClick={()=>setProfileMenu(false)}/><div className="profile-popover" role="menu"><div className="profile-popover-title"><b>{user.name||"Parceiro"}</b><span>{user.email||"Conta de parceiro"}</span></div><button role="menuitem" onClick={()=>navigate("account")}><Icon name="account" size={17}/> Meu perfil</button><button role="menuitem" className="logout-item" onClick={signOut}><Icon name="logout" size={17}/> Sair da conta</button></div></>}</div></div></header>
+ <section className="main"><div style={{padding:"14px 22px 0"}}><TaskFinder tasks={TASKS.filter(task=>(task.route!=="studio"||studioApps.length>0)&&(task.route!=="unlinked"||ownedAppCount>0))} onNavigate={navigate} /></div><header className="app-header"><div className="header-left"><button type="button" className="partner-menu" aria-label="Abrir menu" onClick={()=>setMobileMenu(true)}><Icon name="menu" size={21}/></button><div className="page-heading"><div className="eyebrow"><span className="eyebrow-dot"/>{data.servicePlan?.features?.label||"PARCEIRO DE CONTEÚDO"}</div><h1>{SCREEN_TITLES[screen]||"Painel do parceiro"}</h1><p className="page-subtitle">{SCREEN_SUBTITLES[screen]||"Gerencie sua parceria"}</p></div></div><div className="topright"><button type="button" className="easy-mode-button" aria-pressed={!simpleMode} onClick={()=>setSimpleMode(v=>!v)}>{simpleMode?"Modo simples · mostrar tudo":"Modo completo · simplificar"}</button><button type="button" className="header-refresh" data-help-target="context-help" onClick={()=>window.dispatchEvent(new CustomEvent("deltatv-help-context",{detail:{screen}}))}>? Ajuda</button><button type="button" className="header-refresh" onClick={refresh} title="Atualizar informações"><Icon name="refresh" size={18}/><span>Atualizar</span></button><button type="button" className="header-notifications" aria-label={`Notificações${unread?` (${unread} não lidas)`:""}`} onClick={()=>navigate("notifications")}><Icon name="bell" size={19}/>{showBadge&&unread>0&&<span className="notif-dot"/>}</button><div className="profile-wrap"><button type="button" className="profile-trigger" aria-haspopup="menu" aria-expanded={profileMenu} onClick={()=>navigate("account")}><span className="avatar">{profileDetails?.profile?.avatarData?<img src={profileDetails.profile.avatarData} className="profile-menu-avatar" alt=""/>:(user.name||user.email||"P")[0].toUpperCase()}</span><span className="profile-identity"><b>{user.name||"Parceiro"}</b><small>Minha conta</small></span></button><button type="button" className="profile-menu-toggle" aria-label="Abrir opções da conta" aria-haspopup="menu" aria-expanded={profileMenu} onClick={()=>setProfileMenu(v=>!v)}><Icon name="chevron" size={16}/></button>{profileMenu&&<><button type="button" className="profile-dismiss" aria-label="Fechar menu da conta" onClick={()=>setProfileMenu(false)}/><div className="profile-popover" role="menu"><div className="profile-popover-title"><b>{user.name||"Parceiro"}</b><span>{user.email||"Conta de parceiro"}</span></div><button role="menuitem" onClick={()=>navigate("account")}><Icon name="account" size={17}/> Meu perfil</button><button role="menuitem" className="logout-item" onClick={signOut}><Icon name="logout" size={17}/> Sair da conta</button></div></>}</div></div></header>
  <div className="body"><Breadcrumb panel="parceiro" current={SCREEN_TITLES[screen]||"Início"} onHome={()=>navigate("overview")}/>
  {simpleMode && screen!=="overview" && <EasyPageGuide role="partner" page={screen} onBack={()=>navigate("overview")}/>}
  <HelpExperience screen={screen} portal="content" userId={user.id} onNavigate={navigate}/>
@@ -259,6 +266,7 @@ function PartnerPortalApp(){
  {screen==="licenses"&&<LicensesAndActivations/>}
  {screen==="web"&&<WebPlayer/>}
  {screen==="white-label"&&<WhiteLabelApps/>}
+ {screen==="unlinked"&&<PartnerUnlinkedApps api={api}/>}
  {screen==="studio"&&studioApps.length>0&&<AppearanceStudio apps={studioApps}/>}
  {screen==="credits"&&<CreditsLedger/>}
  {screen==="notifications"&&<Messages onUnread={setUnread}/>}

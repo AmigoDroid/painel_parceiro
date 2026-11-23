@@ -28,7 +28,7 @@ export default function PlanUpgrade({onPayment,master}) {
   </div>
   {error&&<p role="alert" className="alert">{error}</p>}
   {!data&&!error&&<div className="empty">Consultando planos do seu Master…</div>}
-  {data?.current&&<div className="plan-market-current"><div><span>SEU PLANO ATUAL</span><h3>{data.current.name}</h3><p>{data.current.description||'Contrato ativo da sua rede'}</p></div><strong>{data.current.contractPriceCents!=null?`${money(data.current.contractPriceCents)}/mês`:data.current.monthlyPriceCents==null?'Valor sob consulta':`${money(data.current.monthlyPriceCents)}/mês (catálogo)`}</strong></div>}
+  {data?.current&&<div className="plan-market-current"><div><span>SEU PLANO ATUAL</span><h3>{data.current.name}</h3><p>{data.current.description||'Contrato ativo da sua rede'}</p><p><b>Apps próprios incluídos:</b> {Number(data.current.maxApps??0)}</p></div><strong>{data.current.contractPriceCents!=null?`${money(data.current.contractPriceCents)}/mês`:data.current.monthlyPriceCents==null?'Valor sob consulta':`${money(data.current.monthlyPriceCents)}/mês (catálogo)`}</strong></div>}
   {data&&!data.current&&<p className="commercial-info">Ainda não há um plano vinculado ao seu contrato. Consulte seu Master para definir o plano inicial.</p>}
   {data&&!data.available&&data.current&&<p className="commercial-info">{data.reason||'Seu contrato não permite upgrade automático neste momento. Para alterar seu plano, fale com seu Master.'}</p>}
   {data&&data.plans.length===0&&<p className="commercial-info">Seu Master ainda não disponibilizou planos públicos para contratação. Entre em contato para conhecer as opções.</p>}
@@ -39,6 +39,7 @@ export default function PlanUpgrade({onPayment,master}) {
    <div className="plan-market-divider"/>
    <dl className="plan-market-features">
     <div><dt>DNS por código</dt><dd>{limit(p.maxServers)}</dd></div>
+    <div><dt>Apps próprios incluídos</dt><dd>{Number(p.maxApps??0)}</dd></div>
     <div><dt>Ativações</dt><dd>{limit(p.activationLimit)}</dd></div>
     <div><dt>Validade do plano</dt><dd>{p.validityDays} dias</dd></div>
     <div><dt>Failover automático</dt><dd className={p.autoFailover?'is-included':''}>{p.autoFailover?'Incluído':'Não incluído'}</dd></div>
