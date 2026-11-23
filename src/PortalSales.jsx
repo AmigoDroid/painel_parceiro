@@ -39,8 +39,15 @@ export function MyServicePackage() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   useEffect(() => { let alive = true;
-    api('/content-partner/portal-sales/my-package').then(value => { if (alive) setInfo(value); }).catch(e => { if (alive) setError(e.message); });
-    return () => { alive = false; };
+    const refresh = () => api('/content-partner/portal-sales/my-package')
+      .then(value => { if (alive) { setInfo(value); setError(''); } })
+      .catch(e => { if (alive) setError(e.message); });
+    const onFocus = () => { if (document.visibilityState === 'visible') void refresh(); };
+    void refresh();
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onFocus);
+    const interval = setInterval(onFocus, 30000);
+    return () => { alive = false; clearInterval(interval); window.removeEventListener('focus', onFocus); document.removeEventListener('visibilitychange', onFocus); };
   }, []);
   if (error) return <div role="alert" className="alert">{error}</div>;
   if (!info) return <div className="ps-panel">Carregando seu plano…</div>;
@@ -49,6 +56,7 @@ export function MyServicePackage() {
     <div className="ps-metrics">
       <div><small>Meu ID DeltaTV</small><strong>{info.publicId || '—'}</strong><button className="ps-inline-button" type="button" onClick={() => void copyValue(info.publicId)}>Copiar ID</button></div>
       <div><small>DNS por código</small><strong>{info.dns?.limit == null ? 'Ilimitados' : info.dns.limit}</strong></div>
+      <div><small>Apps próprios incluídos</small><strong>{info.features?.maxApps ?? 0}</strong></div>
       <div><small>Ativações</small><strong>{usage.used ?? 0} / {usage.limit == null ? 'Ilimitadas' : usage.limit}</strong></div>
       <div><small>Validade do acesso</small><strong>{date(info.expiresAt)}</strong></div>
       <div><small>Mensalidade a {info.feeRecipient || "DeltaTV"}</small><strong>{moneyCents(info.monthlyFeeCents || 0)}</strong></div>
