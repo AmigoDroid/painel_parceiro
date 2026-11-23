@@ -83,8 +83,10 @@ function PartnerPortalApp(){
  const [ownedAppCount,setOwnedAppCount]=useState(0);
  const [master,setMaster]=useState(null);
  useEffect(()=>{if(!user?.id)return;let active=true;
-  api('/partner/apps').then(r=>{if(active)setOwnedAppCount(r.data?.length || 0)}).catch(()=>{if(active)setOwnedAppCount(0)});
-  return()=>{active=false};
+  const reloadApps=()=>api('/partner/apps').then(r=>{if(active)setOwnedAppCount(r.data?.length || 0)}).catch(()=>{if(active)setOwnedAppCount(0)});
+  void reloadApps();
+  window.addEventListener('partner-apps-changed',reloadApps);
+  return()=>{active=false;window.removeEventListener('partner-apps-changed',reloadApps)};
  },[user?.id]);
  useEffect(()=>{if(!user)return;let live=true;
   api('/partner/network-charges/master').then(m=>{if(live)setMaster(m)}).catch(()=>{if(live)setMaster(null)});
