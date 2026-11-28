@@ -22,16 +22,16 @@ export default function PlanUpgrade({onPayment,master}) {
  };
  return <section className="panel plan-upgrade">
   <div className="plan-market-header">
-   <div><span className="plan-market-eyebrow">{master?.name?`Planos de ${master.name}`:"Planos oferecidos pelo seu Master"}</span><h2>Meu plano e upgrade</h2>
-    <p>Veja seu plano atual, compare as opções da sua rede e escolha um upgrade com o valor confirmado antes de pagar.</p></div>
+   <div><span className="plan-market-eyebrow">{data?.direct?'DeltaTV':master?.name?`Planos de ${master.name}`:"Planos oferecidos pelo seu Master"}</span><h2>Meu plano e upgrade</h2>
+    <p>{data?.direct?'Consulte os limites e o valor do seu contrato com a DeltaTV.':'Compare as opções da sua rede e confira o valor antes de pagar.'}</p></div>
    <button className="outline" type="button" onClick={load} disabled={busy}>Atualizar planos</button>
   </div>
   {error&&<p role="alert" className="alert">{error}</p>}
-  {!data&&!error&&<div className="empty">Consultando planos do seu Master…</div>}
-  {data?.current&&<div className="plan-market-current"><div><span>SEU PLANO ATUAL</span><h3>{data.current.name}</h3><p>{data.current.description||'Contrato ativo da sua rede'}</p><p><b>Apps próprios incluídos:</b> {Number(data.current.maxApps??0)}</p></div><strong>{data.current.contractPriceCents!=null?`${money(data.current.contractPriceCents)}/mês`:data.current.monthlyPriceCents==null?'Valor sob consulta':`${money(data.current.monthlyPriceCents)}/mês (catálogo)`}</strong></div>}
+  {!data&&!error&&<div className="empty">Consultando seu contrato…</div>}
+  {data?.current&&<div className="plan-market-current"><div><span>SEU PLANO ATUAL</span><h3>{data.current.name}</h3><p>{data.current.description||'Condições do contrato'}</p><p><b>DNS por código:</b> {limit(data.current.maxServers)} · <b>Ativações:</b> {limit(data.current.activationLimit)}</p><p><b>Apps próprios incluídos:</b> {Number(data.current.maxApps??0)}</p></div><strong>{data.current.contractPriceCents!=null?`${money(data.current.contractPriceCents)}/mês`:data.current.monthlyPriceCents==null?'Valor sob consulta':`${money(data.current.monthlyPriceCents)}/mês (catálogo)`}</strong></div>}
   {data&&!data.current&&<p className="commercial-info">Ainda não há um plano vinculado ao seu contrato. Consulte seu Master para definir o plano inicial.</p>}
   {data&&!data.available&&data.current&&<p className="commercial-info">{data.reason||'Seu contrato não permite upgrade automático neste momento. Para alterar seu plano, fale com seu Master.'}</p>}
-  {data&&data.plans.length===0&&<p className="commercial-info">Seu Master ainda não disponibilizou planos públicos para contratação. Entre em contato para conhecer as opções.</p>}
+  {data&&!data.direct&&data.plans.length===0&&<p className="commercial-info">Seu Master ainda não disponibilizou planos públicos para contratação. Entre em contato para conhecer as opções.</p>}
   {data?.plans.length>0&&<div className="plan-market-intro"><div><h3>Planos disponíveis na sua rede</h3><p>Confira valores, limites e recursos de cada opção antes de continuar.</p></div><span>{data.plans.length} {data.plans.length===1?'plano':'planos'}</span></div>}
   <div className="plan-market-grid">{data?.plans.map(p=><article className={`plan-market-card${p.isCurrent?' is-current':''}${p.canUpgrade?' is-upgrade':''}`} key={p.key}>
    <div className="plan-market-card-top"><span className="plan-market-tag">{p.isCurrent?'Plano atual':p.canUpgrade?'Upgrade disponível':'Consulte o Master'}</span><h3>{p.name}</h3><p>{p.description||'Plano disponibilizado pelo seu Master.'}</p></div>
